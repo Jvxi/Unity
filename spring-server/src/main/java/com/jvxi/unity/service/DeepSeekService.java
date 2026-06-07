@@ -19,10 +19,10 @@ public class DeepSeekService {
 
     public List<Map<String, String>> getModels() {
         List<Map<String, String>> models = new ArrayList<>();
-        models.add(Map.of("id", "deepseek-chat", "name", "DeepSeek-V3", "description", "通用对话，速度快"));
-        models.add(Map.of("id", "deepseek-reasoner", "name", "DeepSeek-R1", "description", "深度推理，更准确"));
-        models.add(Map.of("id", "deepseek-v4-flash", "name", "DeepSeek-V4 Flash", "description", "轻量快速，性价比高"));
+        models.add(Map.of("id", "deepseek-v4-flash", "name", "DeepSeek-V4 Flash", "description", "轻量快速，性价比高（推荐）"));
         models.add(Map.of("id", "deepseek-v4-pro", "name", "DeepSeek-V4 Pro", "description", "专业版，能力最强"));
+        models.add(Map.of("id", "deepseek-chat", "name", "DeepSeek-V3 (legacy)", "description", "将于 2026/07/24 弃用"));
+        models.add(Map.of("id", "deepseek-reasoner", "name", "DeepSeek-R1 (legacy)", "description", "将于 2026/07/24 弃用"));
         return models;
     }
 

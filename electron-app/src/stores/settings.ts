@@ -3,7 +3,7 @@ import { ref } from "vue";
 
 export const useSettingsStore = defineStore("settings", () => {
   const apiKey = ref(localStorage.getItem("unity_apiKey") || "");
-  const selectedModel = ref(localStorage.getItem("unity_model") || "deepseek-chat");
+  const selectedModel = ref(localStorage.getItem("unity_model") || "deepseek-v4-flash");
   const menuCollapsed = ref(localStorage.getItem("unity_menuCollapsed") === "true");
 
   function setApiKey(val: string) {
