@@ -36,3 +36,5 @@ vite*.log
 *.tmp
 *.bak
 *.swp
+# Electron build
+release/
