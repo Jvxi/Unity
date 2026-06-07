@@ -57,6 +57,8 @@ onMounted(async () => {
     models.value = [
       { id: "deepseek-chat", name: "DeepSeek-V3", description: "通用对话，速度快" },
       { id: "deepseek-reasoner", name: "DeepSeek-R1", description: "深度推理，更准确" },
+      { id: "deepseek-v4-flash", name: "DeepSeek-V4 Flash", description: "轻量快速，性价比高" },
+      { id: "deepseek-v4-pro", name: "DeepSeek-V4 Pro", description: "专业版，能力最强" },
     ];
   }
 });

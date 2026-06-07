@@ -4,7 +4,6 @@ import com.jvxi.unity.model.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 import java.util.*;
 
 @Service
@@ -18,36 +17,19 @@ public class DeepSeekService {
 
     private final WebClient webClient = WebClient.builder().build();
 
-    /**
-     * 获取可用模型列表
-     */
     public List<Map<String, String>> getModels() {
         List<Map<String, String>> models = new ArrayList<>();
-        Map<String, String> m1 = new HashMap<>();
-        m1.put("id", "deepseek-chat");
-        m1.put("name", "DeepSeek-V3");
-        m1.put("description", "通用对话，速度快");
-        models.add(m1);
-
-        Map<String, String> m2 = new HashMap<>();
-        m2.put("id", "deepseek-reasoner");
-        m2.put("name", "DeepSeek-R1");
-        m2.put("description", "深度推理，更准确");
-        models.add(m2);
+        models.add(Map.of("id", "deepseek-chat", "name", "DeepSeek-V3", "description", "通用对话，速度快"));
+        models.add(Map.of("id", "deepseek-reasoner", "name", "DeepSeek-R1", "description", "深度推理，更准确"));
+        models.add(Map.of("id", "deepseek-v4-flash", "name", "DeepSeek-V4 Flash", "description", "轻量快速，性价比高"));
+        models.add(Map.of("id", "deepseek-v4-pro", "name", "DeepSeek-V4 Pro", "description", "专业版，能力最强"));
         return models;
     }
 
-    /**
-     * 调用 DeepSeek API 分析虚表
-     */
     public String analyzeWithAI(PeInfo peInfo, List<VtableInfo> vtables, String apiKey, String model) {
-        if (apiKey == null || apiKey.isBlank()) {
-            return null;
-        }
-        String prompt = buildPrompt(peInfo, vtables);
+        if (apiKey == null || apiKey.isBlank()) return null;
         try {
-            String response = callApi(prompt, apiKey, model);
-            return response;
+            return callApi(buildPrompt(peInfo, vtables), apiKey, model);
         } catch (Exception e) {
             return "AI 分析失败: " + e.getMessage();
         }
@@ -56,7 +38,6 @@ public class DeepSeekService {
     private String buildPrompt(PeInfo peInfo, List<VtableInfo> vtables) {
         StringBuilder sb = new StringBuilder();
         sb.append("你是一个 Windows PE 逆向分析专家。请分析以下 DLL 文件的虚表（vtable）信息。\n\n");
-
         sb.append("## PE 基本信息\n");
         sb.append("- 文件名: ").append(peInfo.getFileName()).append("\n");
         sb.append("- 架构: ").append(peInfo.getMachine()).append(" (").append(peInfo.getMagic()).append(")\n");
@@ -64,11 +45,10 @@ public class DeepSeekService {
         sb.append("- 子系统: ").append(peInfo.getSubsystem()).append("\n");
         sb.append("- 段数量: ").append(peInfo.getNumberOfSections()).append("\n\n");
 
-        if (peInfo.getSections() != null && !peInfo.getSections().isEmpty()) {
+        if (peInfo.getSections() != null) {
             sb.append("## 段表\n");
             for (SectionInfo sec : peInfo.getSections()) {
-                sb.append("- ").append(sec.getName())
-                  .append(" VA=").append(sec.getRva())
+                sb.append("- ").append(sec.getName()).append(" VA=").append(sec.getRva())
                   .append(" Size=0x").append(Long.toHexString(sec.getVirtualSize()))
                   .append(" [").append(sec.getCharacteristics()).append("]\n");
             }
@@ -83,7 +63,6 @@ public class DeepSeekService {
                 sb.append("- ").append(exp.getName() != null ? exp.getName() : "ordinal_" + exp.getOrdinal())
                   .append(" RVA=").append(exp.getRva()).append("\n");
             }
-            if (peInfo.getExports().size() > 50) sb.append("... 等共 ").append(peInfo.getExports().size()).append(" 个\n");
             sb.append("\n");
         }
 
@@ -104,16 +83,11 @@ public class DeepSeekService {
         for (int i = 0; i < vtables.size(); i++) {
             VtableInfo vt = vtables.get(i);
             sb.append("### 虚表 ").append(i + 1).append("\n");
-            sb.append("- RVA: ").append(vt.getRva())
-              .append(" VA: ").append(vt.getVa())
+            sb.append("- RVA: ").append(vt.getRva()).append(" VA: ").append(vt.getVa())
               .append(" 函数数量: ").append(vt.getFunctionCount())
               .append(" 检测方法: ").append(vt.getDetectionMethod()).append("\n");
-            if (vt.getRttiTypeName() != null) {
-                sb.append("- RTTI 类型名: ").append(vt.getRttiTypeName()).append("\n");
-            }
-            if (vt.getRelatedSymbol() != null) {
-                sb.append("- 关联符号: ").append(vt.getRelatedSymbol()).append("\n");
-            }
+            if (vt.getRttiTypeName() != null) sb.append("- RTTI 类型名: ").append(vt.getRttiTypeName()).append("\n");
+            if (vt.getRelatedSymbol() != null) sb.append("- 关联符号: ").append(vt.getRelatedSymbol()).append("\n");
             sb.append("- 函数指针:\n");
             for (VFunctionInfo f : vt.getFunctions()) {
                 sb.append("  [").append(f.getIndex()).append("] RVA=").append(f.getRva())
@@ -126,18 +100,14 @@ public class DeepSeekService {
         sb.append("2. 推测每个虚表可能的类名（如果 RTTI 没有提供）\n");
         sb.append("3. 简要说明该 DLL 的整体结构特征\n");
         sb.append("请用中文回答，简洁明了。\n");
-
         return sb.toString();
     }
 
     private String callApi(String prompt, String apiKey, String model) {
         if (model == null || model.isBlank()) model = defaultModel;
-
         Map<String, Object> body = new HashMap<>();
         body.put("model", model);
-        body.put("messages", List.of(
-            Map.of("role", "user", "content", prompt)
-        ));
+        body.put("messages", List.of(Map.of("role", "user", "content", prompt)));
         body.put("max_tokens", 4096);
         body.put("temperature", 0.3);
 

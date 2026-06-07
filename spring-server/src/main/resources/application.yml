@@ -1,4 +1,4 @@
-﻿server:
+server:
   port: 8080
   servlet:
     multipart:
@@ -18,3 +18,9 @@ deepseek:
     - id: deepseek-reasoner
       name: DeepSeek-R1
       description: "深度推理，更准确"
+    - id: deepseek-v4-flash
+      name: DeepSeek-V4 Flash
+      description: "轻量快速，性价比高"
+    - id: deepseek-v4-pro
+      name: DeepSeek-V4 Pro
+      description: "专业版，能力最强"
