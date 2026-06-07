@@ -1,93 +1,94 @@
-# Unity - DLL VTable Analyzer
+<div align="center">
 
-DLL 逆向分析工具，通过 PE 结构解析和 AI 智能分析，反向出 DLL 文件内部的虚表（vtable）地址信息。
+# 🔍 Unity - DLL VTable Analyzer
 
-## 功能特性
+**DLL 逆向分析工具 · PE 结构解析 · AI 智能分析 · 虚表地址提取**
 
-- **全面 PE 解析**：解析 DOS/PE 头、段表、Data Directory（16 个）、导出/导入表、调试信息、TLS 回调等
-- **多策略虚表检测**：
-  - RTTI Complete Object Locator 扫描
-  - 连续代码指针数组扫描
-  - 导出数据符号交叉引用
-- **AI 智能分析**：支持多个 AI 提供商，辅助确认虚表、排除误报、推测类名
-- **桌面客户端**：Electron + Vue 3 + Element Plus，左侧可折叠菜单栏
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://www.oracle.com/java/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-green.svg)](https://spring.io/)
+[![Vue.js](https://img.shields.io/badge/Vue.js-3-brightgreen.svg)](https://vuejs.org/)
+[![Electron](https://img.shields.io/badge/Electron-30-lightgrey.svg)](https://www.electronjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
+[![Element Plus](https://img.shields.io/badge/Element%20Plus-2.6-blue.svg)](https://element-plus.org/)
 
-## 技术栈
+<br/>
 
-| 组件 | 技术 |
-|------|------|
-| 后端 | Java 21 + Spring Boot 3.2 |
-| 前端 | Electron + Vue 3 + TypeScript + Element Plus |
-| PE 解析 | 手写二进制解析（ByteBuffer） |
-| AI 集成 | DeepSeek / 小米 MiMo（OpenAI 兼容格式） |
+[![GitHub stars](https://img.shields.io/github/stars/Jvxi/Unity?style=social)](https://github.com/Jvxi/Unity/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/Jvxi/Unity?style=social)](https://github.com/Jvxi/Unity/network/members)
+[![GitHub issues](https://img.shields.io/github/issues/Jvxi/Unity)](https://github.com/Jvxi/Unity/issues)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/Jvxi/Unity)](https://github.com/Jvxi/Unity/pulls)
 
-## 支持的 AI 模型
+</div>
 
-### DeepSeek
+---
 
-| 模型 ID | 说明 |
-|---------|------|
-| `deepseek-v4-flash` | 轻量快速，性价比高（推荐） |
-| `deepseek-v4-pro` | 专业版，能力最强 |
-| `deepseek-chat` | V3 legacy（将于 2026/07/24 弃用） |
-| `deepseek-reasoner` | R1 legacy（将于 2026/07/24 弃用） |
+## ✨ 功能特性
 
-### 小米 MiMo
+<table>
+<tr>
+<td width="50%">
 
-| 模型 ID | 说明 |
-|---------|------|
-| `MiMo-V2.5` | 主模型，通用对话 |
-| `mimo-v2.5-pro` | 专业版 |
-| `MiMo-V2-Flash` | 轻量快速版 |
-| `MiMo-V2-Pro` | legacy（将于 2026/06/30 弃用） |
-| `MiMo-V2-Omni` | 多模态 legacy（将于 2026/06/30 弃用） |
+### 📦 PE 全面解析
+- DOS/PE 头、段表完整解析
+- 16 个 Data Directory 全覆盖
+- 导出/导入表详细提取
+- 调试信息（PDB 路径、GUID）
+- TLS 回调、数字签名检测
 
-## 项目结构
+</td>
+<td width="50%">
 
-```
-Unity/
-├── spring-server/                # Spring Boot 后端
-│   ├── pom.xml
-│   └── src/main/java/com/jvxi/unity/
-│       ├── controller/           # REST API
-│       ├── service/              # 业务逻辑
-│       │   ├── pe/               # PE 解析器
-│       │   ├── VtableDetectorService.java
-│       │   └── DeepSeekService.java
-│       └── model/                # 数据模型
-│
-├── electron-app/                 # Electron + Vue 3 前端
-│   ├── package.json
-│   ├── electron/main.ts          # Electron 主进程
-│   └── src/
-│       ├── layout/               # 布局组件（可折叠菜单）
-│       ├── views/                # 页面视图
-│       ├── components/           # 通用组件
-│       ├── api/                  # API 调用
-│       ├── stores/               # 状态管理
-│       └── types/                # TypeScript 类型
-│
-└── README.md
-```
+### 🎯 多策略虚表检测
+- **RTTI 引导**：扫描 Complete Object Locator
+- **指针扫描**：连续代码指针数组检测
+- **导出引用**：导出符号交叉引用分析
+- 自动 MSVC 类名 demangle
 
-## 快速开始
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### 🤖 AI 智能分析
+- 支持 **DeepSeek** 和 **小米 MiMo** 双平台
+- 模型商自由切换
+- 自动确认真实虚表
+- 推测类名和函数用途
+
+</td>
+<td width="50%">
+
+### 🖥️ 桌面客户端
+- Electron + Vue 3 + TypeScript
+- 左侧可折叠菜单栏
+- 拖拽上传 DLL 文件
+- 虚表结果可展开详情
+
+</td>
+</tr>
+</table>
+
+---
+
+## 🚀 快速开始
 
 ### 环境要求
 
-- JDK 21
-- Node.js 18+
-- Maven 3.9+
+![JDK](https://img.shields.io/badge/JDK-21+-orange)
+![Node.js](https://img.shields.io/badge/Node.js-18+-green)
+![Maven](https://img.shields.io/badge/Maven-3.9+-blue)
 
-### 启动后端
+### 1. 启动后端
 
 ```bash
 cd spring-server
 mvn spring-boot:run
 ```
 
-后端默认运行在 `http://localhost:8080`。
+> 后端默认运行在 `http://localhost:8080`
 
-### 启动前端
+### 2. 启动前端
 
 ```bash
 cd electron-app
@@ -95,15 +96,41 @@ npm install
 npm run dev
 ```
 
-### 使用流程
+### 3. 使用流程
 
-1. 启动后端和前端
-2. 在设置页面配置 AI 提供商和 API Key
-3. 进入"DLL 分析"页面，拖拽或选择 DLL 文件
-4. 点击"开始分析"，等待 PE 解析和 AI 分析完成
-5. 查看虚表分析结果
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  配置 AI    │───▶│  上传 DLL   │───▶│  PE 解析    │───▶│  查看结果   │
+│  API Key    │    │  拖拽/选择  │    │  + AI 分析  │    │  虚表详情   │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+```
 
-## API 接口
+---
+
+## 🤖 支持的 AI 模型
+
+### DeepSeek
+
+| 模型 | 说明 | 状态 |
+|------|------|------|
+| `deepseek-v4-flash` | 轻量快速，性价比高 | ✅ 推荐 |
+| `deepseek-v4-pro` | 专业版，能力最强 | ✅ 可用 |
+| `deepseek-chat` | V3 通用对话 | ⚠️ 2026/07/24 弃用 |
+| `deepseek-reasoner` | R1 深度推理 | ⚠️ 2026/07/24 弃用 |
+
+### 小米 MiMo
+
+| 模型 | 说明 | 状态 |
+|------|------|------|
+| `MiMo-V2.5` | 主模型，通用对话 | ✅ 推荐 |
+| `mimo-v2.5-pro` | 专业版 | ✅ 可用 |
+| `MiMo-V2-Flash` | 轻量快速版 | ✅ 可用 |
+| `MiMo-V2-Pro` | 多模态版 | ⚠️ 2026/06/30 弃用 |
+| `MiMo-V2-Omni` | 全能版 | ⚠️ 2026/06/30 弃用 |
+
+---
+
+## 📡 API 接口
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
@@ -111,24 +138,31 @@ npm run dev
 | `GET` | `/api/providers` | 获取 AI 提供商和模型列表 |
 | `POST` | `/api/analyze` | 上传 DLL 文件进行分析 |
 
-### POST /api/analyze
+<details>
+<summary>📋 POST /api/analyze 详细参数</summary>
 
 **请求**：`multipart/form-data`
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `file` | File | 是 | DLL 文件 |
-| `apiKey` | String | 否 | AI API Key |
-| `provider` | String | 否 | AI 提供商（默认 `deepseek`） |
-| `model` | String | 否 | 模型 ID |
+| `file` | File | ✅ | DLL 文件 |
+| `apiKey` | String | ❌ | AI API Key |
+| `provider` | String | ❌ | AI 提供商（默认 `deepseek`） |
+| `model` | String | ❌ | 模型 ID |
 
-**响应**：
-
+**响应示例**：
 ```json
 {
   "success": true,
   "data": {
-    "peInfo": { ... },
+    "peInfo": {
+      "fileName": "example.dll",
+      "machine": "AMD64",
+      "imageBase": "0x180000000",
+      "sections": [...],
+      "exports": [...],
+      "imports": [...]
+    },
     "vtables": [
       {
         "rva": "0x82040",
@@ -136,7 +170,7 @@ npm run dev
         "functionCount": 5,
         "detectionMethod": "RTTI",
         "rttiTypeName": "MyClass",
-        "functions": [ ... ]
+        "functions": [...]
       }
     ],
     "aiSummary": "该 DLL 包含 2 个确认虚表..."
@@ -144,18 +178,106 @@ npm run dev
 }
 ```
 
-## PE 解析覆盖范围
+</details>
 
-- DOS Header、PE Signature、COFF File Header
-- Optional Header（ImageBase、Subsystem、DLL Characteristics 安全标志）
-- 16 个 Data Directory（Export/Import/Resource/Exception/Certificate/Relocation/Debug/TLS/LoadConfig/IAT/DelayImport/CLR 等）
-- 全部 Section Header（RVA、大小、属性标志）
-- 导出函数列表（名称、序号、RVA、Forwarder 检测）
-- 导入函数列表（来源 DLL、函数名、Hint）
-- 调试目录（CodeView PDB 路径、GUID、Age）
-- TLS 回调地址
-- 数字签名检测（Authenticode）
+---
 
-## License
+## 🏗️ 项目结构
 
-MIT
+```
+Unity/
+├── spring-server/                    # 🔧 Spring Boot 后端
+│   ├── pom.xml
+│   └── src/main/java/com/jvxi/unity/
+│       ├── controller/               # REST API 入口
+│       ├── service/
+│       │   ├── pe/                   # PE 解析器（手写二进制解析）
+│       │   ├── VtableDetectorService # 虚表检测（三策略）
+│       │   └── DeepSeekService       # AI 集成（多提供商）
+│       └── model/                    # 数据模型
+│
+├── electron-app/                     # 🖥️ Electron + Vue 3 前端
+│   ├── package.json
+│   ├── electron/main.ts             # Electron 主进程
+│   └── src/
+│       ├── layout/MainLayout.vue    # 可折叠菜单布局
+│       ├── views/                   # 页面视图
+│       ├── components/              # 通用组件
+│       ├── api/client.ts            # API 调用封装
+│       ├── stores/settings.ts       # 状态管理
+│       └── types/index.ts           # TypeScript 类型
+│
+├── LICENSE                          # MIT License
+└── README.md
+```
+
+---
+
+## 🔍 PE 解析覆盖范围
+
+<details>
+<summary>📂 完整解析清单</summary>
+
+**文件头层**
+- DOS Header（e_magic, e_lfanew）
+- PE Signature
+- COFF File Header（Machine, NumberOfSections, TimeDateStamp, Characteristics）
+
+**Optional Header**
+- Magic（PE32/PE32+）、ImageBase、SectionAlignment、FileAlignment
+- Subsystem（WINDOWS_GUI/WINDOWS_CUI/NATIVE 等）
+- DLL Characteristics（ASLR, DEP, CFG, High Entropy VA 等安全标志）
+
+**16 个 Data Directory**
+- [0] Export Table → 导出函数（名称、序号、RVA、Forwarder）
+- [1] Import Table → 导入 DLL 列表 + 函数名/Hint/Thunk RVA
+- [2] Resource Table
+- [3] Exception Table
+- [4] Certificate Table → 数字签名检测
+- [5] Base Relocation Table
+- [6] Debug Directory → CodeView PDB 路径/GUID/Age
+- [7] Architecture
+- [8] Global Ptr
+- [9] TLS Table → TLS 回调地址列表
+- [10] Load Config → Security Cookie, Guard CF
+- [11] Bound Import
+- [12] IAT
+- [13] Delay Import
+- [14] CLR Runtime Header
+- [15] Reserved
+
+**段表**
+- 所有 Section：Name, VirtualAddress, VirtualSize, RawDataPtr, RawDataSize, Characteristics
+
+</details>
+
+---
+
+## 📊 技术栈
+
+<div align="center">
+
+![Java](https://img.shields.io/badge/Java-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
+![Spring](https://img.shields.io/badge/Spring_Boot-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white)
+![Vue.js](https://img.shields.io/badge/Vue.js-35495E?style=for-the-badge&logo=vuedotjs&logoColor=4FC08D)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
+![Electron](https://img.shields.io/badge/Electron-2B2E3A?style=for-the-badge&logo=electron&logoColor=9FEAF9)
+![Element Plus](https://img.shields.io/badge/Element_Plus-409EFF?style=for-the-badge&logo=element&logoColor=white)
+
+</div>
+
+---
+
+## 📄 License
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+---
+
+<div align="center">
+
+**如果这个项目对你有帮助，请给一个 ⭐ Star 支持一下！**
+
+![Star History](https://api.star-history.com/svg?repos=Jvxi/Unity&type=Date)
+
+</div>
