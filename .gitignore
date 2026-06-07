@@ -22,3 +22,5 @@ electron-app/dist-electron/
 # Env
 .env.local
 .env.*.local
+# Logs
+*.log
