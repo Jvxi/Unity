@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <el-card class="peinfo-card">
     <template #header>
       <div class="card-header">

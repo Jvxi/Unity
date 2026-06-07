@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <el-card class="vtable-card">
     <template #header>
       <div class="card-header">
