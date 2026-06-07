@@ -7,7 +7,7 @@
          @click="triggerInput">
       <div class="upload-inner">
         <div class="upload-icon-wrap">
-          <el-icon :size="36" color="var(--color-primary)"><UploadFilled /></el-icon>
+          <el-icon :size="32" color="var(--color-primary)"><UploadFilled /></el-icon>
         </div>
         <div class="upload-text">拖拽 DLL 文件到此处，或 <em>点击选择</em></div>
         <div class="upload-hint">仅支持 .dll 文件</div>
@@ -54,9 +54,9 @@ function formatSize(bytes: number): string {
 <style scoped>
 .upload-card { overflow: hidden; }
 .upload-zone {
-  border: 2px dashed rgba(99,102,241,0.2);
+  border: 2px dashed rgba(74,222,128,0.25);
   border-radius: var(--radius-lg);
-  padding: 40px 24px;
+  padding: 36px 24px;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s var(--transition-smooth);
@@ -64,23 +64,23 @@ function formatSize(bytes: number): string {
 }
 .upload-zone:hover, .upload-zone.is-dragover {
   border-color: var(--color-primary);
-  background: rgba(99,102,241,0.06);
+  background: rgba(74,222,128,0.06);
 }
 .upload-icon-wrap {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   border-radius: var(--radius-lg);
-  background: rgba(99,102,241,0.1);
+  background: rgba(74,222,128,0.1);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 16px;
+  margin: 0 auto 14px;
 }
 .upload-text { color: var(--color-text); font-size: 14px; }
-.upload-text em { color: var(--color-primary); font-style: normal; font-weight: 600; }
-.upload-hint { color: var(--color-text-secondary); font-size: 12px; margin-top: 6px; }
+.upload-text em { color: var(--color-primary-dark); font-style: normal; font-weight: 600; }
+.upload-hint { color: var(--color-text-secondary); font-size: 12px; margin-top: 4px; }
 .file-info {
-  margin-top: 16px;
+  margin-top: 14px;
   display: flex;
   align-items: center;
   gap: 12px;

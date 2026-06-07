@@ -1,9 +1,9 @@
 <template>
-  <el-container style="height: 100vh">
+  <el-container style="height: 100vh; padding: 12px; gap: 12px;">
     <el-aside :width="isCollapsed ? '72px' : '220px'" class="sidebar" ref="sidebarRef">
       <div class="logo" ref="logoRef">
         <div class="logo-icon">
-          <el-icon :size="24"><Cpu /></el-icon>
+          <el-icon :size="22"><Cpu /></el-icon>
         </div>
         <transition name="fade-slide">
           <span v-show="!isCollapsed" class="logo-text">VTable Analyzer</span>
@@ -19,17 +19,17 @@
           :class="{ active: currentRoute === item.path }"
         >
           <div class="menu-icon">
-            <el-icon :size="20"><component :is="item.icon" /></el-icon>
+            <el-icon :size="18"><component :is="item.icon" /></el-icon>
           </div>
           <transition name="fade-slide">
             <span v-show="!isCollapsed" class="menu-label">{{ item.label }}</span>
           </transition>
-          <div v-if="currentRoute === item.path" class="active-indicator"></div>
+          <div v-if="currentRoute === item.path" class="active-dot"></div>
         </router-link>
       </nav>
 
       <div class="collapse-btn" @click="toggleCollapse">
-        <el-icon :size="16">
+        <el-icon :size="14">
           <component :is="isCollapsed ? 'ArrowRight' : 'ArrowLeft'" />
         </el-icon>
       </div>
@@ -37,7 +37,7 @@
       <div class="sidebar-glow" ref="glowRef"></div>
     </el-aside>
 
-    <el-container>
+    <el-container class="main-area">
       <el-header class="header" ref="headerRef">
         <h2 class="page-title">{{ pageTitle }}</h2>
       </el-header>
@@ -100,10 +100,10 @@ const animatePageEnter = () => {
     if (cards.length > 0) {
       animate(cards, {
         opacity: [{ from: 0 }, { to: 1 }],
-        translateY: [{ from: 24 }, { to: 0 }],
-        scale: [{ from: 0.97 }, { to: 1 }],
-        duration: 450,
-        delay: stagger(80, { start: 80 }),
+        translateY: [{ from: 20 }, { to: 0 }],
+        scale: [{ from: 0.98 }, { to: 1 }],
+        duration: 400,
+        delay: stagger(70, { start: 60 }),
         ease: 'outElastic(1, .85)',
       });
     }
@@ -114,8 +114,8 @@ const animateGlow = () => {
   if (glowRef.value) {
     animate(glowRef.value, {
       top: ['0%', '100%'],
-      opacity: [0, 0.4, 0],
-      duration: 4000,
+      opacity: [0, 0.3, 0],
+      duration: 5000,
       loop: true,
       ease: 'inOutSine',
     });
@@ -130,9 +130,9 @@ onMounted(() => {
   if (logoRef.value) {
     animate(logoRef.value, {
       opacity: [{ from: 0 }, { to: 1 }],
-      translateY: [{ from: -16 }, { to: 0 }],
-      duration: 500,
-      ease: 'outElastic(1, .7)',
+      translateY: [{ from: -12 }, { to: 0 }],
+      duration: 450,
+      ease: 'outElastic(1, .75)',
     });
   }
 });
@@ -149,43 +149,44 @@ const pageTitle = computed(() => {
 
 <style scoped>
 .sidebar {
-  background: linear-gradient(180deg, #1a1a2e 0%, #16162a 100%);
+  background: var(--color-sidebar);
   display: flex;
   flex-direction: column;
   transition: width 0.35s var(--transition-smooth);
   overflow: hidden;
   position: relative;
-  border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
+  border-radius: var(--radius-xl);
+  flex-shrink: 0;
 }
 
 .logo {
-  height: 64px;
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   padding: 0 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
   position: relative;
   z-index: 2;
 }
 .logo-icon {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: var(--radius-md);
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: #052e16;
   flex-shrink: 0;
 }
 .logo-text {
   color: #e2e8f0;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
 }
 
 .menu-nav {
@@ -193,7 +194,7 @@ const pageTitle = computed(() => {
   padding: 12px 10px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   position: relative;
   z-index: 2;
 }
@@ -203,23 +204,23 @@ const pageTitle = computed(() => {
   gap: 12px;
   padding: 10px 14px;
   border-radius: var(--radius-md);
-  color: #94a3b8;
+  color: #6b7280;
   text-decoration: none;
   transition: all 0.25s var(--transition-smooth);
   position: relative;
   overflow: hidden;
 }
 .menu-item:hover {
-  color: #e2e8f0;
+  color: #d1d5db;
   background: var(--color-sidebar-hover);
 }
 .menu-item.active {
-  color: #fff;
-  background: rgba(99,102,241,0.15);
+  color: var(--color-primary);
+  background: rgba(74,222,128,0.08);
 }
 .menu-icon {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -228,22 +229,22 @@ const pageTitle = computed(() => {
   transition: all 0.25s var(--transition-smooth);
 }
 .menu-item.active .menu-icon {
-  background: var(--color-primary);
-  color: #fff;
+  background: rgba(74,222,128,0.15);
+  color: var(--color-primary);
 }
 .menu-label {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
 }
-.active-indicator {
+.active-dot {
   position: absolute;
-  left: 0;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
-  width: 3px;
-  height: 20px;
-  border-radius: 0 3px 3px 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
   background: var(--color-primary);
 }
 
@@ -252,14 +253,14 @@ const pageTitle = computed(() => {
   padding: 10px;
   text-align: center;
   cursor: pointer;
-  color: #64748b;
+  color: #4b5563;
   border-radius: var(--radius-sm);
   transition: all 0.25s var(--transition-smooth);
   position: relative;
   z-index: 2;
 }
 .collapse-btn:hover {
-  color: #e2e8f0;
+  color: #d1d5db;
   background: var(--color-sidebar-hover);
 }
 
@@ -268,13 +269,18 @@ const pageTitle = computed(() => {
   left: 0;
   width: 100%;
   height: 80px;
-  background: linear-gradient(180deg, transparent, rgba(99,102,241,0.06), transparent);
+  background: linear-gradient(180deg, transparent, rgba(74,222,128,0.04), transparent);
   pointer-events: none;
   z-index: 1;
 }
 
+.main-area {
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background: var(--color-bg);
+}
 .header {
-  height: 60px;
+  height: 56px;
   display: flex;
   align-items: center;
   padding: 0 28px;
@@ -282,26 +288,26 @@ const pageTitle = computed(() => {
   border-bottom: 1px solid var(--color-border);
 }
 .page-title {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--color-text);
-  letter-spacing: -0.3px;
+  letter-spacing: -0.2px;
 }
 .main-content {
   background: var(--color-bg);
-  padding: 24px;
+  padding: 20px;
   overflow-y: auto;
 }
 
 /* 路由过渡 */
-.page-slide-enter-active { transition: all 0.35s var(--transition-smooth); }
-.page-slide-leave-active { transition: all 0.2s var(--transition-smooth); }
-.page-slide-enter-from { opacity: 0; transform: translateY(16px) scale(0.99); }
-.page-slide-leave-to { opacity: 0; transform: translateY(-8px) scale(0.99); }
+.page-slide-enter-active { transition: all 0.3s var(--transition-smooth); }
+.page-slide-leave-active { transition: all 0.18s var(--transition-smooth); }
+.page-slide-enter-from { opacity: 0; transform: translateY(14px) scale(0.99); }
+.page-slide-leave-to { opacity: 0; transform: translateY(-6px) scale(0.99); }
 
-/* 文字淡入滑出 */
+/* 文字淡入 */
 .fade-slide-enter-active { transition: all 0.25s var(--transition-smooth); }
 .fade-slide-leave-active { transition: all 0.15s var(--transition-smooth); }
-.fade-slide-enter-from { opacity: 0; transform: translateX(-8px); }
-.fade-slide-leave-to { opacity: 0; transform: translateX(8px); }
+.fade-slide-enter-from { opacity: 0; transform: translateX(-6px); }
+.fade-slide-leave-to { opacity: 0; transform: translateX(6px); }
 </style>

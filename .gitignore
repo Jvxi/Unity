@@ -19,11 +19,20 @@ electron-app/node_modules/
 electron-app/dist/
 electron-app/dist-electron/
 
-# Env
-.env.local
-.env.*.local
 # Logs
 *.log
+logs/
+spring-boot*.log
+vite*.log
 
 # DLL test files
 *.dll
+
+# Env
+.env.local
+.env.*.local
+
+# Misc
+*.tmp
+*.bak
+*.swp

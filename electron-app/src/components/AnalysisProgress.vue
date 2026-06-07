@@ -22,14 +22,14 @@ defineProps<{ percent: number }>();
   gap: 10px;
 }
 .spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(99,102,241,0.2);
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(74,222,128,0.2);
   border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
-.progress-text { color: var(--color-primary); font-size: 14px; font-weight: 500; }
+.progress-text { color: var(--color-primary-dark); font-size: 14px; font-weight: 500; }
 .progress-pct { color: var(--color-text-secondary); font-size: 13px; margin-left: auto; }
 </style>
