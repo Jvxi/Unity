@@ -24,3 +24,6 @@ electron-app/dist-electron/
 .env.*.local
 # Logs
 *.log
+
+# DLL test files
+*.dll

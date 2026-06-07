@@ -1,150 +1,157 @@
 <template>
   <div class="home">
-    <el-card class="welcome-card" ref="welcomeCardRef">
-      <template #header>
-        <div class="card-header">
-          <el-icon :size="32" color="#409eff"><Cpu /></el-icon>
-          <span>DLL VTable Analyzer</span>
+    <div class="hero-card">
+      <div class="hero-content">
+        <div class="hero-icon">
+          <el-icon :size="40"><Cpu /></el-icon>
         </div>
-      </template>
-      <p class="desc">上传 DLL 文件，通过 PE 结构解析和 AI 分析，反向出其内部的虚表（vtable）地址信息。</p>
-      <el-button type="primary" size="large" @click="$router.push('/analysis')" class="start-btn">
-        <el-icon><Search /></el-icon>
-        开始分析
-      </el-button>
-    </el-card>
+        <div class="hero-text">
+          <h1>DLL VTable Analyzer</h1>
+          <p>上传 DLL 文件，通过 PE 结构解析和 AI 分析，反向出其内部的虚表地址信息</p>
+        </div>
+        <el-button type="primary" size="large" class="start-btn" @click="$router.push('/analysis')">
+          <el-icon><Search /></el-icon>
+          开始分析
+        </el-button>
+      </div>
+    </div>
 
-    <el-row :gutter="20" class="features">
-      <el-col :span="8">
-        <el-card class="feature-card" ref="card1Ref">
-          <el-icon :size="28" color="#67c23a"><Document /></el-icon>
-          <h3>PE 全面解析</h3>
-          <p>解析 PE 头、段表、导出/导入表、调试信息、TLS 等全部结构</p>
-        </el-card>
-      </el-col>
-      <el-col :span="8">
-        <el-card class="feature-card" ref="card2Ref">
-          <el-icon :size="28" color="#e6a23c"><Search /></el-icon>
-          <h3>多策略虚表检测</h3>
-          <p>RTTI 引导、连续指针扫描、导出交叉引用三种策略互补</p>
-        </el-card>
-      </el-col>
-      <el-col :span="8">
-        <el-card class="feature-card" ref="card3Ref">
-          <el-icon :size="28" color="#f56c6c"><MagicStick /></el-icon>
-          <h3>AI 智能分析</h3>
-          <p>DeepSeek / 小米 MiMo 大模型辅助确认虚表、排除误报、推测类名</p>
-        </el-card>
-      </el-col>
-    </el-row>
+    <div class="feature-grid">
+      <div class="feature-item" v-for="(f, i) in features" :key="i">
+        <div class="feature-icon" :style="{ background: f.bg }">
+          <el-icon :size="24" :color="f.color"><component :is="f.icon" /></el-icon>
+        </div>
+        <h3>{{ f.title }}</h3>
+        <p>{{ f.desc }}</p>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { onMounted } from "vue";
 import { animate, stagger } from "animejs";
 
-const welcomeCardRef = ref<HTMLElement | null>(null);
-const card1Ref = ref<HTMLElement | null>(null);
-const card2Ref = ref<HTMLElement | null>(null);
-const card3Ref = ref<HTMLElement | null>(null);
+const features = [
+  { icon: "Document", color: "#10b981", bg: "rgba(16,185,129,0.1)", title: "PE 全面解析", desc: "解析 PE 头、段表、导出/导入表、调试信息、TLS 等全部结构" },
+  { icon: "Search", color: "#f59e0b", bg: "rgba(245,158,11,0.1)", title: "多策略虚表检测", desc: "RTTI 引导、连续指针扫描、导出交叉引用三种策略互补" },
+  { icon: "MagicStick", color: "#6366f1", bg: "rgba(99,102,241,0.1)", title: "AI 智能分析", desc: "DeepSeek / 小米 MiMo 大模型辅助确认虚表、排除误报" },
+];
 
 onMounted(() => {
-  // 欢迎卡片入场动画
-  const welcomeCard = document.querySelector('.welcome-card');
-  if (welcomeCard) {
-    animate(welcomeCard, {
+  const hero = document.querySelector('.hero-card');
+  if (hero) {
+    animate(hero, {
       opacity: [{ from: 0 }, { to: 1 }],
-      translateY: [{ from: 40 }, { to: 0 }],
+      translateY: [{ from: 20 }, { to: 0 }],
+      scale: [{ from: 0.98 }, { to: 1 }],
+      duration: 500,
+      ease: 'outElastic(1, .75)',
+    });
+  }
+  const items = document.querySelectorAll('.feature-item');
+  if (items.length > 0) {
+    animate(items, {
+      opacity: [{ from: 0 }, { to: 1 }],
+      translateY: [{ from: 30 }, { to: 0 }],
       scale: [{ from: 0.95 }, { to: 1 }],
-      duration: 600,
-      ease: 'outElastic(1, .6)',
+      duration: 500,
+      delay: stagger(100, { start: 200 }),
+      ease: 'outElastic(1, .75)',
     });
   }
-
-  // 功能卡片交错入场
-  const featureCards = document.querySelectorAll('.feature-card');
-  if (featureCards.length > 0) {
-    animate(featureCards, {
-      opacity: [{ from: 0 }, { to: 1 }],
-      translateY: [{ from: 50 }, { to: 0 }],
-      scale: [{ from: 0.9 }, { to: 1 }],
-      duration: 600,
-      delay: stagger(150, { start: 300 }),
-      ease: 'outElastic(1, .6)',
-    });
-  }
-
-  // 开始按钮脉冲动画
-  const startBtn = document.querySelector('.start-btn');
-  if (startBtn) {
-    animate(startBtn, {
-      scale: [{ from: 1 }, { to: 1.05 }, { to: 1 }],
-      duration: 2000,
-      loop: true,
-      ease: 'inOutQuad',
-    });
-  }
-
-  // 卡片悬停动画
-  featureCards.forEach(card => {
-    card.addEventListener('mouseenter', () => {
-      animate(card, {
-        translateY: -8,
-        boxShadow: '0 12px 24px rgba(0,0,0,0.15)',
-        duration: 300,
-        ease: 'outElastic(1, .8)',
-      });
-    });
-    card.addEventListener('mouseleave', () => {
-      animate(card, {
-        translateY: 0,
-        boxShadow: '0 2px 12px rgba(0,0,0,0.1)',
-        duration: 300,
-        ease: 'outElastic(1, .8)',
-      });
-    });
-  });
 });
 </script>
 
 <style scoped>
-.home { max-width: 900px; margin: 0 auto; }
-.welcome-card {
-  margin-bottom: 24px;
+.home { max-width: 860px; margin: 0 auto; }
+
+.hero-card {
+  background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
+  border-radius: var(--radius-xl);
+  padding: 36px 40px;
+  margin-bottom: 28px;
+  color: #fff;
   opacity: 0;
 }
-.card-header {
+.hero-content {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 20px;
-  font-weight: bold;
+  gap: 24px;
 }
-.desc {
-  color: #606266;
-  font-size: 15px;
-  margin-bottom: 20px;
-  line-height: 1.8;
+.hero-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-lg);
+  background: rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  backdrop-filter: blur(8px);
+}
+.hero-text h1 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  letter-spacing: -0.5px;
+}
+.hero-text p {
+  font-size: 14px;
+  opacity: 0.85;
+  line-height: 1.6;
 }
 .start-btn {
-  transition: all 0.3s ease;
+  margin-left: auto;
+  flex-shrink: 0;
+  border-radius: var(--radius-md) !important;
+  background: rgba(255,255,255,0.2) !important;
+  border: 1px solid rgba(255,255,255,0.3) !important;
+  backdrop-filter: blur(8px);
+  transition: all 0.3s var(--transition-smooth);
 }
 .start-btn:hover {
+  background: rgba(255,255,255,0.35) !important;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.4);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
 }
-.features .el-card {
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.feature-item {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 28px 24px;
   text-align: center;
-  padding: 20px;
   opacity: 0;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
+  transition: all 0.3s var(--transition-smooth);
+  cursor: default;
 }
-.features .el-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+.feature-item:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-lg);
 }
-.features h3 { margin: 12px 0 8px; font-size: 16px; }
-.features p { color: #909399; font-size: 13px; }
+.feature-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+.feature-item h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 8px;
+}
+.feature-item p {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
 </style>

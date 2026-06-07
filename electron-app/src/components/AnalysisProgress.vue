@@ -1,10 +1,12 @@
 <template>
-  <el-card>
-    <div class="progress">
-      <el-icon class="spin" :size="20"><Loading /></el-icon>
-      <span>正在分析中... {{ percent > 0 ? percent + '%' : '' }}</span>
+  <el-card class="progress-card">
+    <div class="progress-inner">
+      <div class="spinner"></div>
+      <span class="progress-text">正在分析中{{ percent > 0 ? '...' : '' }}</span>
+      <span v-if="percent > 0" class="progress-pct">{{ percent }}%</span>
     </div>
-    <el-progress v-if="percent > 0" :percentage="percent" :stroke-width="8" style="margin-top:8px" />
+    <el-progress v-if="percent > 0" :percentage="percent" :stroke-width="6" :show-text="false"
+      color="var(--color-primary)" style="margin-top:12px" />
   </el-card>
 </template>
 
@@ -13,7 +15,21 @@ defineProps<{ percent: number }>();
 </script>
 
 <style scoped>
-.progress { display: flex; align-items: center; gap: 8px; color: #409eff; font-size: 14px; }
-.spin { animation: rotate 1s linear infinite; }
-@keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.progress-card { background: var(--color-primary-bg); }
+.progress-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(99,102,241,0.2);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.progress-text { color: var(--color-primary); font-size: 14px; font-weight: 500; }
+.progress-pct { color: var(--color-text-secondary); font-size: 13px; margin-left: auto; }
 </style>

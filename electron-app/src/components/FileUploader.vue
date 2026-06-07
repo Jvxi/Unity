@@ -1,22 +1,24 @@
 <template>
-  <el-card>
-    <el-upload
-      class="uploader"
-      drag
-      :auto-upload="false"
-      :show-file-list="false"
-      accept=".dll"
-      :on-change="onFileChange"
-      v-loading="loading"
-    >
-      <el-icon class="upload-icon"><UploadFilled /></el-icon>
-      <div class="upload-text">拖拽 DLL 文件到此处，或 <em>点击上传</em></div>
-      <div class="upload-hint">仅支持 .dll 文件</div>
-    </el-upload>
+  <el-card class="upload-card">
+    <div class="upload-zone" :class="{ 'is-dragover': isDragover }"
+         @dragover.prevent="isDragover = true"
+         @dragleave="isDragover = false"
+         @drop.prevent="onDrop"
+         @click="triggerInput">
+      <div class="upload-inner">
+        <div class="upload-icon-wrap">
+          <el-icon :size="36" color="var(--color-primary)"><UploadFilled /></el-icon>
+        </div>
+        <div class="upload-text">拖拽 DLL 文件到此处，或 <em>点击选择</em></div>
+        <div class="upload-hint">仅支持 .dll 文件</div>
+      </div>
+      <input ref="fileInput" type="file" accept=".dll" style="display:none" @change="onFileChange" />
+    </div>
     <div v-if="file" class="file-info">
-      <el-tag type="success">{{ file.name }}</el-tag>
+      <el-tag type="success" effect="light" round>{{ file.name }}</el-tag>
       <span class="file-size">{{ formatSize(file.size) }}</span>
-      <el-button type="primary" @click="emit('upload', file)" :loading="loading" style="margin-left:12px">
+      <el-button type="primary" round :loading="loading" @click.stop="emit('upload', file)" style="margin-left:auto">
+        <el-icon><VideoPlay /></el-icon>
         开始分析
       </el-button>
     </div>
@@ -25,30 +27,63 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import type { UploadFile } from "element-plus";
 
 defineProps<{ loading: boolean }>();
 const emit = defineEmits<{ upload: [file: File] }>();
 
 const file = ref<File | null>(null);
+const isDragover = ref(false);
+const fileInput = ref<HTMLInputElement | null>(null);
 
-function onFileChange(uploadFile: UploadFile) {
-  file.value = uploadFile.raw;
+function triggerInput() { fileInput.value?.click(); }
+function onFileChange(e: Event) {
+  const input = e.target as HTMLInputElement;
+  if (input.files?.[0]) file.value = input.files[0];
 }
-
+function onDrop(e: DragEvent) {
+  isDragover.value = false;
+  if (e.dataTransfer?.files?.[0]) file.value = e.dataTransfer.files[0];
+}
 function formatSize(bytes: number): string {
   if (bytes < 1024) return bytes + " B";
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-  return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / 1048576).toFixed(2) + " MB";
 }
 </script>
 
 <style scoped>
-.uploader { width: 100%; }
-.upload-icon { font-size: 48px; color: #c0c4cc; }
-.upload-text { color: #606266; font-size: 14px; margin-top: 8px; }
-.upload-text em { color: #409eff; font-style: normal; }
-.upload-hint { color: #909399; font-size: 12px; margin-top: 4px; }
-.file-info { margin-top: 12px; display: flex; align-items: center; }
-.file-size { color: #909399; font-size: 13px; margin-left: 8px; }
+.upload-card { overflow: hidden; }
+.upload-zone {
+  border: 2px dashed rgba(99,102,241,0.2);
+  border-radius: var(--radius-lg);
+  padding: 40px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s var(--transition-smooth);
+  background: var(--color-primary-bg);
+}
+.upload-zone:hover, .upload-zone.is-dragover {
+  border-color: var(--color-primary);
+  background: rgba(99,102,241,0.06);
+}
+.upload-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-lg);
+  background: rgba(99,102,241,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+.upload-text { color: var(--color-text); font-size: 14px; }
+.upload-text em { color: var(--color-primary); font-style: normal; font-weight: 600; }
+.upload-hint { color: var(--color-text-secondary); font-size: 12px; margin-top: 6px; }
+.file-info {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.file-size { color: var(--color-text-secondary); font-size: 13px; }
 </style>

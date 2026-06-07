@@ -1,53 +1,50 @@
 <template>
   <el-container style="height: 100vh">
-    <el-aside :width="isCollapsed ? '64px' : '200px'" class="sidebar" ref="sidebarRef">
+    <el-aside :width="isCollapsed ? '72px' : '220px'" class="sidebar" ref="sidebarRef">
       <div class="logo" ref="logoRef">
-        <el-icon :size="28"><Cpu /></el-icon>
-        <span v-show="!isCollapsed" class="logo-text">VTable Analyzer</span>
+        <div class="logo-icon">
+          <el-icon :size="24"><Cpu /></el-icon>
+        </div>
+        <transition name="fade-slide">
+          <span v-show="!isCollapsed" class="logo-text">VTable Analyzer</span>
+        </transition>
       </div>
 
-      <el-menu
-        :default-active="currentRoute"
-        :collapse="isCollapsed"
-        router
-        background-color="transparent"
-        text-color="#a3a6b4"
-        active-text-color="#409eff"
-        :collapse-transition="false"
-        ref="menuRef"
-      >
-        <el-menu-item index="/" ref="menuItem1">
-          <el-icon><HomeFilled /></el-icon>
-          <template #title>首页</template>
-        </el-menu-item>
-        <el-menu-item index="/analysis" ref="menuItem2">
-          <el-icon><Search /></el-icon>
-          <template #title>DLL 分析</template>
-        </el-menu-item>
-        <el-menu-item index="/settings" ref="menuItem3">
-          <el-icon><Setting /></el-icon>
-          <template #title>设置</template>
-        </el-menu-item>
-      </el-menu>
+      <nav class="menu-nav">
+        <router-link
+          v-for="item in menuItems"
+          :key="item.path"
+          :to="item.path"
+          class="menu-item"
+          :class="{ active: currentRoute === item.path }"
+        >
+          <div class="menu-icon">
+            <el-icon :size="20"><component :is="item.icon" /></el-icon>
+          </div>
+          <transition name="fade-slide">
+            <span v-show="!isCollapsed" class="menu-label">{{ item.label }}</span>
+          </transition>
+          <div v-if="currentRoute === item.path" class="active-indicator"></div>
+        </router-link>
+      </nav>
 
-      <div class="collapse-btn" @click="toggleCollapse" ref="collapseBtnRef">
-        <el-icon>
+      <div class="collapse-btn" @click="toggleCollapse">
+        <el-icon :size="16">
           <component :is="isCollapsed ? 'ArrowRight' : 'ArrowLeft'" />
         </el-icon>
       </div>
 
-      <!-- 装饰性流动光效 -->
       <div class="sidebar-glow" ref="glowRef"></div>
     </el-aside>
 
     <el-container>
       <el-header class="header" ref="headerRef">
-        <span class="page-title">{{ pageTitle }}</span>
+        <h2 class="page-title">{{ pageTitle }}</h2>
       </el-header>
       <el-main class="main-content">
-        <router-view v-slot="{ Component, route }">
-          <transition name="page-fade" mode="out-in">
-            <component :is="Component" :key="route.path" />
+        <router-view v-slot="{ Component, route: r }">
+          <transition name="page-slide" mode="out-in">
+            <component :is="Component" :key="r.path" />
           </transition>
         </router-view>
       </el-main>
@@ -59,7 +56,7 @@
 import { computed, ref, onMounted, watch, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import { useSettingsStore } from "@/stores/settings";
-import { animate, stagger, utils } from "animejs";
+import { animate, stagger } from "animejs";
 
 const route = useRoute();
 const store = useSettingsStore();
@@ -71,141 +68,73 @@ const sidebarRef = ref<HTMLElement | null>(null);
 const logoRef = ref<HTMLElement | null>(null);
 const headerRef = ref<HTMLElement | null>(null);
 const glowRef = ref<HTMLElement | null>(null);
-const collapseBtnRef = ref<HTMLElement | null>(null);
+
+const menuItems = [
+  { path: "/", icon: "HomeFilled", label: "首页" },
+  { path: "/analysis", icon: "Search", label: "DLL 分析" },
+  { path: "/settings", icon: "Setting", label: "设置" },
+];
 
 const toggleCollapse = () => {
   const newState = !store.menuCollapsed;
   store.setMenuCollapsed(newState);
-  animateSidebar(newState);
+  animateMenuItems();
 };
 
-const animateSidebar = (collapsed: boolean) => {
-  // 菜单项交错动画
-  const menuItems = document.querySelectorAll('.el-menu-item');
-  if (menuItems.length > 0) {
-    animate(menuItems, {
-      opacity: [{ from: 0.5 }, { to: 1 }],
-      translateX: collapsed ? [{ from: -10 }, { to: 0 }] : [{ from: 10 }, { to: 0 }],
-      duration: 400,
-      delay: stagger(50),
-      ease: 'outElastic(1, .8)',
-    });
-  }
-
-  // Logo 动画
-  if (logoRef.value) {
-    animate(logoRef.value, {
-      scale: [{ from: 0.9 }, { to: 1 }],
-      duration: 300,
-      ease: 'outBack(1.7)',
+const animateMenuItems = () => {
+  const items = document.querySelectorAll('.menu-item');
+  if (items.length > 0) {
+    animate(items, {
+      opacity: [{ from: 0.6 }, { to: 1 }],
+      translateX: isCollapsed.value ? [{ from: -8 }, { to: 0 }] : [{ from: 8 }, { to: 0 }],
+      duration: 350,
+      delay: stagger(40),
+      ease: 'outElastic(1, .85)',
     });
   }
 };
 
-// 页面入场动画
 const animatePageEnter = () => {
   nextTick(() => {
-    const mainContent = document.querySelector('.main-content');
-    if (mainContent) {
-      const cards = mainContent.querySelectorAll('.el-card');
-      if (cards.length > 0) {
-        animate(cards, {
-          opacity: [{ from: 0 }, { to: 1 }],
-          translateY: [{ from: 30 }, { to: 0 }],
-          scale: [{ from: 0.95 }, { to: 1 }],
-          duration: 500,
-          delay: stagger(100, { start: 100 }),
-          ease: 'outElastic(1, .8)',
-        });
-      }
+    const cards = document.querySelectorAll('.main-content .el-card');
+    if (cards.length > 0) {
+      animate(cards, {
+        opacity: [{ from: 0 }, { to: 1 }],
+        translateY: [{ from: 24 }, { to: 0 }],
+        scale: [{ from: 0.97 }, { to: 1 }],
+        duration: 450,
+        delay: stagger(80, { start: 80 }),
+        ease: 'outElastic(1, .85)',
+      });
     }
   });
 };
 
-// Logo 入场动画
-const animateLogo = () => {
-  if (logoRef.value) {
-    animate(logoRef.value, {
-      opacity: [{ from: 0 }, { to: 1 }],
-      translateY: [{ from: -20 }, { to: 0 }],
-      duration: 600,
-      ease: 'outElastic(1, .6)',
-    });
-  }
-};
-
-// 头部入场动画
-const animateHeader = () => {
-  if (headerRef.value) {
-    animate(headerRef.value, {
-      opacity: [{ from: 0 }, { to: 1 }],
-      translateX: [{ from: -30 }, { to: 0 }],
-      duration: 500,
-      delay: 200,
-      ease: 'outElastic(1, .8)',
-    });
-  }
-};
-
-// 菜单项入场动画
-const animateMenuItems = () => {
-  const menuItems = document.querySelectorAll('.el-menu-item');
-  if (menuItems.length > 0) {
-    animate(menuItems, {
-      opacity: [{ from: 0 }, { to: 1 }],
-      translateX: [{ from: -30 }, { to: 0 }],
-      duration: 500,
-      delay: stagger(100, { start: 300 }),
-      ease: 'outElastic(1, .8)',
-    });
-  }
-};
-
-// 流动光效动画
 const animateGlow = () => {
   if (glowRef.value) {
     animate(glowRef.value, {
       top: ['0%', '100%'],
-      opacity: [{ from: 0 }, { to: 0.3 }, { to: 0 }],
-      duration: 3000,
+      opacity: [0, 0.4, 0],
+      duration: 4000,
       loop: true,
-      ease: 'inOutQuad',
+      ease: 'inOutSine',
     });
   }
 };
 
-// 折叠按钮悬停动画
-const animateCollapseBtn = () => {
-  if (collapseBtnRef.value) {
-    collapseBtnRef.value.addEventListener('mouseenter', () => {
-      animate(collapseBtnRef.value!, {
-        scale: 1.1,
-        duration: 200,
-        ease: 'outElastic(1, .8)',
-      });
-    });
-    collapseBtnRef.value.addEventListener('mouseleave', () => {
-      animate(collapseBtnRef.value!, {
-        scale: 1,
-        duration: 200,
-        ease: 'outElastic(1, .8)',
-      });
-    });
-  }
-};
-
-// 监听路由变化
-watch(() => route.path, () => {
-  animatePageEnter();
-});
+watch(() => route.path, animatePageEnter);
 
 onMounted(() => {
-  animateLogo();
-  animateHeader();
-  animateMenuItems();
   animateGlow();
-  animateCollapseBtn();
   animatePageEnter();
+  if (logoRef.value) {
+    animate(logoRef.value, {
+      opacity: [{ from: 0 }, { to: 1 }],
+      translateY: [{ from: -16 }, { to: 0 }],
+      duration: 500,
+      ease: 'outElastic(1, .7)',
+    });
+  }
 });
 
 const pageTitle = computed(() => {
@@ -220,111 +149,159 @@ const pageTitle = computed(() => {
 
 <style scoped>
 .sidebar {
-  background: linear-gradient(180deg, #1a1b2e 0%, #1d1e2c 50%, #1a1b2e 100%);
+  background: linear-gradient(180deg, #1a1a2e 0%, #16162a 100%);
   display: flex;
   flex-direction: column;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.35s var(--transition-smooth);
   overflow: hidden;
   position: relative;
+  border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
 }
+
 .logo {
-  height: 60px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  color: #409eff;
-  font-size: 16px;
-  font-weight: bold;
-  border-bottom: 1px solid rgba(64, 158, 255, 0.1);
+  gap: 10px;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
   position: relative;
   z-index: 2;
 }
-.logo-text { white-space: nowrap; }
+.logo-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+.logo-text {
+  color: #e2e8f0;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+
+.menu-nav {
+  flex: 1;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  z-index: 2;
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  color: #94a3b8;
+  text-decoration: none;
+  transition: all 0.25s var(--transition-smooth);
+  position: relative;
+  overflow: hidden;
+}
+.menu-item:hover {
+  color: #e2e8f0;
+  background: var(--color-sidebar-hover);
+}
+.menu-item.active {
+  color: #fff;
+  background: rgba(99,102,241,0.15);
+}
+.menu-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  transition: all 0.25s var(--transition-smooth);
+}
+.menu-item.active .menu-icon {
+  background: var(--color-primary);
+  color: #fff;
+}
+.menu-label {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.active-indicator {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  border-radius: 0 3px 3px 0;
+  background: var(--color-primary);
+}
+
 .collapse-btn {
-  margin-top: auto;
-  padding: 12px;
+  margin: 8px 10px 12px;
+  padding: 10px;
   text-align: center;
   cursor: pointer;
-  color: #a3a6b4;
-  border-top: 1px solid rgba(64, 158, 255, 0.1);
-  transition: all 0.3s ease;
+  color: #64748b;
+  border-radius: var(--radius-sm);
+  transition: all 0.25s var(--transition-smooth);
   position: relative;
   z-index: 2;
 }
 .collapse-btn:hover {
-  color: #409eff;
-  background: rgba(64, 158, 255, 0.1);
+  color: #e2e8f0;
+  background: var(--color-sidebar-hover);
 }
 
-/* 流动光效 */
 .sidebar-glow {
   position: absolute;
   left: 0;
   width: 100%;
-  height: 60px;
-  background: linear-gradient(180deg,
-    transparent 0%,
-    rgba(64, 158, 255, 0.05) 30%,
-    rgba(64, 158, 255, 0.1) 50%,
-    rgba(64, 158, 255, 0.05) 70%,
-    transparent 100%);
+  height: 80px;
+  background: linear-gradient(180deg, transparent, rgba(99,102,241,0.06), transparent);
   pointer-events: none;
   z-index: 1;
 }
 
-/* 菜单项动画增强 */
-.sidebar :deep(.el-menu) {
-  border-right: none;
-  background: transparent !important;
-}
-.sidebar :deep(.el-menu-item) {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-.sidebar :deep(.el-menu-item)::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 3px;
-  height: 100%;
-  background: #409eff;
-  transform: scaleY(0);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.sidebar :deep(.el-menu-item.is-active)::before {
-  transform: scaleY(1);
-}
-.sidebar :deep(.el-menu-item:hover) {
-  background: rgba(64, 158, 255, 0.08) !important;
-}
-
 .header {
-  height: 56px;
+  height: 60px;
   display: flex;
   align-items: center;
-  padding: 0 24px;
-  background: #fff;
-  border-bottom: 1px solid #e4e7ed;
+  padding: 0 28px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
 }
-.page-title { font-size: 18px; font-weight: 600; color: #303133; }
-.main-content { background: #f5f7fa; padding: 20px; overflow-y: auto; }
+.page-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: -0.3px;
+}
+.main-content {
+  background: var(--color-bg);
+  padding: 24px;
+  overflow-y: auto;
+}
 
-/* 页面切换动画 */
-.page-fade-enter-active {
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.page-fade-leave-active {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.page-fade-enter-from {
-  opacity: 0;
-  transform: translateY(20px) scale(0.98);
-}
-.page-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-10px) scale(0.98);
-}
+/* 路由过渡 */
+.page-slide-enter-active { transition: all 0.35s var(--transition-smooth); }
+.page-slide-leave-active { transition: all 0.2s var(--transition-smooth); }
+.page-slide-enter-from { opacity: 0; transform: translateY(16px) scale(0.99); }
+.page-slide-leave-to { opacity: 0; transform: translateY(-8px) scale(0.99); }
+
+/* 文字淡入滑出 */
+.fade-slide-enter-active { transition: all 0.25s var(--transition-smooth); }
+.fade-slide-leave-active { transition: all 0.15s var(--transition-smooth); }
+.fade-slide-enter-from { opacity: 0; transform: translateX(-8px); }
+.fade-slide-leave-to { opacity: 0; transform: translateX(8px); }
 </style>

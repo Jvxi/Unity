@@ -2,12 +2,20 @@ server:
   port: 8080
   servlet:
     multipart:
-      max-file-size: 100MB
-      max-request-size: 100MB
+      max-file-size: 200MB
+      max-request-size: 200MB
+  tomcat:
+    max-http-form-post-size: 200MB
+    max-swallow-size: 200MB
 
 spring:
   application:
     name: unity-vtable-analyzer
+  servlet:
+    multipart:
+      max-file-size: 200MB
+      max-request-size: 200MB
+      enabled: true
 
 ai:
   providers:

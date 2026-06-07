@@ -1,9 +1,7 @@
 <template>
   <div class="analysis">
     <FileUploader :loading="loading" @upload="handleUpload" />
-
     <AnalysisProgress v-if="loading" :percent="uploadPercent" />
-
     <template v-if="result">
       <PeInfoPanel :pe-info="result.peInfo" />
       <VtableResult :vtables="result.vtables" :ai-summary="result.aiSummary" />
@@ -12,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, watch } from "vue";
+import { ref, nextTick } from "vue";
 import { ElMessage } from "element-plus";
 import { animate, stagger } from "animejs";
 import { analyzeDll } from "@/api/client";
@@ -46,27 +44,15 @@ async function handleUpload(file: File) {
 }
 
 function animateResult() {
-  // PE 信息面板入场
-  const pePanel = document.querySelector('.analysis .el-card:first-of-type');
-  if (pePanel) {
-    animate(pePanel, {
+  const cards = document.querySelectorAll('.analysis .el-card');
+  if (cards.length > 0) {
+    animate(cards, {
       opacity: [{ from: 0 }, { to: 1 }],
-      translateY: [{ from: 30 }, { to: 0 }],
-      scale: [{ from: 0.95 }, { to: 1 }],
-      duration: 500,
-      ease: 'outElastic(1, .7)',
-    });
-  }
-
-  // 虚表结果表格入场
-  const vtableCards = document.querySelectorAll('.analysis .el-card');
-  if (vtableCards.length > 1) {
-    animate(Array.from(vtableCards).slice(1), {
-      opacity: [{ from: 0 }, { to: 1 }],
-      translateY: [{ from: 40 }, { to: 0 }],
-      duration: 600,
-      delay: stagger(200, { start: 300 }),
-      ease: 'outElastic(1, .7)',
+      translateY: [{ from: 24 }, { to: 0 }],
+      scale: [{ from: 0.97 }, { to: 1 }],
+      duration: 450,
+      delay: stagger(100, { start: 100 }),
+      ease: 'outElastic(1, .8)',
     });
   }
 }
