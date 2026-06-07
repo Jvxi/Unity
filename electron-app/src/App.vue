@@ -34,7 +34,7 @@ html, body, #app { height: 100%; font-family: "SF Pro Display", -apple-system, "
   --transition-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Element Plus 鍦嗚瑕嗙洊 */
+/* Element Plus border-radius override */
 .el-card { border-radius: var(--radius-md) !important; border: none !important; box-shadow: var(--shadow-sm) !important; }
 .el-card:hover { box-shadow: var(--shadow-md) !important; }
 .el-button { border-radius: var(--radius-sm) !important; }
