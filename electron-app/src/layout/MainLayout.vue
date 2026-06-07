@@ -16,7 +16,7 @@
           :key="item.path"
           :to="item.path"
           class="menu-item"
-          :class="{ active: currentRoute === item.path }"
+          :class="{ active: currentRoute === item.path, 'collapsed-item': isCollapsed }"
         >
           <div class="menu-icon">
             <el-icon :size="18"><component :is="item.icon" /></el-icon>
@@ -24,7 +24,7 @@
           <transition name="fade-slide">
             <span v-show="!isCollapsed" class="menu-label">{{ item.label }}</span>
           </transition>
-          <div v-if="currentRoute === item.path" class="active-dot"></div>
+          <div v-if="currentRoute === item.path && !isCollapsed" class="active-dot"></div>
         </router-link>
       </nav>
 
@@ -203,6 +203,7 @@ const pageTitle = computed(() => {
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
+  justify-content: flex-start;
   border-radius: var(--radius-md);
   color: #6b7280;
   text-decoration: none;
@@ -217,6 +218,8 @@ const pageTitle = computed(() => {
 .menu-item.active {
   color: var(--color-primary);
   background: rgba(74,222,128,0.08);
+  border-left: 3px solid var(--color-primary);
+  padding-left: 11px;
 }
 .menu-icon {
   width: 34px;
@@ -310,4 +313,11 @@ const pageTitle = computed(() => {
 .fade-slide-leave-active { transition: all 0.15s var(--transition-smooth); }
 .fade-slide-enter-from { opacity: 0; transform: translateX(-6px); }
 .fade-slide-leave-to { opacity: 0; transform: translateX(6px); }
+
+.menu-item.active.collapsed-item {
+  background: rgba(74,222,128,0.12);
+  border-left: none;
+  padding-left: 14px;
+  justify-content: center;
+}
 </style>
