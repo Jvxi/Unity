@@ -1,56 +1,24 @@
-﻿# =============== #
-# Unity .gitignore #
-# =============== #
-
-# Unity generated
-Library/
-Temp/
-Obj/
-Build/
-Builds/
-Logs/
-UserSettings/
-MemoryCaptures/
-
-# Asset meta
-*.pidb.meta
-*.pdb.meta
-*.mdb.meta
-
-# Visual Studio / Rider / VS Code
+# IDE
 .vs/
 .vscode/
-*.csproj
-*.sln
-*.suo
-*.tmp
-*.user
-*.userprefs
-*.pidb
-*.booproj
-*.svd
-*.pdb
-*.mdb
-*.opendb
-*.VC.db
-*.VC.VC.opendb
 .idea/
+*.iml
 
-# OS generated
+# OS
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# Builds
-*.apk
-*.aab
-*.unitypackage
-*.app
+# Java build
+spring-server/target/
+spring-server/*.class
+spring-server/.mvn/
 
-# Gradle (Android)
-.gradle/
-ExportedObj/
+# Node
+electron-app/node_modules/
+electron-app/dist/
+electron-app/dist-electron/
 
-# Misc
-sysinfo.txt
-crashlytics-build.properties
+# Env
+.env.local
+.env.*.local

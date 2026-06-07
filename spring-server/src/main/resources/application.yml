@@ -1,0 +1,20 @@
+﻿server:
+  port: 8080
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+spring:
+  application:
+    name: unity-vtable-analyzer
+
+deepseek:
+  api-url: https://api.deepseek.com/chat/completions
+  models:
+    - id: deepseek-chat
+      name: DeepSeek-V3
+      description: "通用对话，速度快"
+    - id: deepseek-reasoner
+      name: DeepSeek-R1
+      description: "深度推理，更准确"
