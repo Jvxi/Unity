@@ -1,13 +1,35 @@
 <template>
   <div class="settings">
     <el-card>
-      <template #header><span style="font-weight:600">DeepSeek API 设置</span></template>
+      <template #header><span style="font-weight:600">AI 模型设置</span></template>
       <el-form label-width="100px">
+        <el-form-item label="AI 提供商">
+          <el-select v-model="provider" style="width: 100%" @change="onProviderChange">
+            <el-option
+              v-for="p in providers"
+              :key="p.id"
+              :label="p.name"
+              :value="p.id"
+            />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="模型选择">
+          <el-select v-model="model" style="width: 100%">
+            <el-option
+              v-for="m in currentModels"
+              :key="m.id"
+              :label="m.name + ' - ' + m.description"
+              :value="m.id"
+            />
+          </el-select>
+        </el-form-item>
+
         <el-form-item label="API Key">
           <el-input
             v-model="apiKey"
             :type="showKey ? 'text' : 'password'"
-            placeholder="输入你的 DeepSeek API Key"
+            placeholder="输入 API Key"
           >
             <template #append>
               <el-button @click="showKey = !showKey">
@@ -15,17 +37,6 @@
               </el-button>
             </template>
           </el-input>
-        </el-form-item>
-
-        <el-form-item label="模型选择">
-          <el-select v-model="model" style="width: 100%">
-            <el-option
-              v-for="m in models"
-              :key="m.id"
-              :label="m.name + ' - ' + m.description"
-              :value="m.id"
-            />
-          </el-select>
         </el-form-item>
 
         <el-form-item>
@@ -38,33 +49,57 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { ElMessage } from "element-plus";
-import { getModels, healthCheck } from "@/api/client";
+import { getProviders, healthCheck } from "@/api/client";
 import { useSettingsStore } from "@/stores/settings";
-import type { ModelInfo } from "@/types";
+import type { ProviderInfo } from "@/types";
 
 const store = useSettingsStore();
 const apiKey = ref(store.apiKey);
+const provider = ref(store.selectedProvider);
 const model = ref(store.selectedModel);
 const showKey = ref(false);
-const models = ref<ModelInfo[]>([]);
+const providers = ref<ProviderInfo[]>([]);
+
+const currentModels = computed(() => {
+  const p = providers.value.find(p => p.id === provider.value);
+  return p?.models || [];
+});
 
 onMounted(async () => {
   try {
-    models.value = await getModels();
+    providers.value = await getProviders();
   } catch {
-    models.value = [
-      { id: "deepseek-v4-flash", name: "DeepSeek-V4 Flash", description: "轻量快速，性价比高（推荐）" },
-      { id: "deepseek-v4-pro", name: "DeepSeek-V4 Pro", description: "专业版，能力最强" },
-      { id: "deepseek-chat", name: "DeepSeek-V3 (legacy)", description: "将于 2026/07/24 弃用" },
-      { id: "deepseek-reasoner", name: "DeepSeek-R1 (legacy)", description: "将于 2026/07/24 弃用" },
+    providers.value = [
+      {
+        id: "deepseek", name: "DeepSeek",
+        models: [
+          { id: "deepseek-v4-flash", name: "DeepSeek-V4 Flash", description: "轻量快速" },
+          { id: "deepseek-v4-pro", name: "DeepSeek-V4 Pro", description: "专业版" },
+        ]
+      },
+      {
+        id: "xiaomi", name: "小米 MiMo",
+        models: [
+          { id: "MiMo-V2.5", name: "MiMo-V2.5", description: "小米主模型" },
+          { id: "mimo-v2.5-pro", name: "MiMo-V2.5 Pro", description: "专业版" },
+        ]
+      }
     ];
   }
 });
 
+function onProviderChange(val: string) {
+  const p = providers.value.find(p => p.id === val);
+  if (p?.models?.length) {
+    model.value = p.models[0].id;
+  }
+}
+
 function save() {
   store.setApiKey(apiKey.value);
+  store.setProvider(provider.value);
   store.setModel(model.value);
   ElMessage.success("设置已保存");
 }

@@ -115,8 +115,15 @@ export interface ModelInfo {
   description: string;
 }
 
+export interface ProviderInfo {
+  id: string;
+  name: string;
+  models: ModelInfo[];
+}
+
 export interface SettingsState {
   apiKey: string;
+  selectedProvider: string;
   selectedModel: string;
   menuCollapsed: boolean;
 }

@@ -9,18 +9,40 @@ spring:
   application:
     name: unity-vtable-analyzer
 
-deepseek:
-  api-url: https://api.deepseek.com/chat/completions
-  models:
-    - id: deepseek-v4-flash
-      name: DeepSeek-V4 Flash
-      description: "轻量快速，性价比高（推荐）"
-    - id: deepseek-v4-pro
-      name: DeepSeek-V4 Pro
-      description: "专业版，能力最强"
-    - id: deepseek-chat
-      name: "DeepSeek-V3 (legacy)"
-      description: "将于 2026/07/24 弃用"
-    - id: deepseek-reasoner
-      name: "DeepSeek-R1 (legacy)"
-      description: "将于 2026/07/24 弃用"
+ai:
+  providers:
+    - id: deepseek
+      name: DeepSeek
+      api-url: https://api.deepseek.com/chat/completions
+      models:
+        - id: deepseek-v4-flash
+          name: DeepSeek-V4 Flash
+          description: "轻量快速，性价比高（推荐）"
+        - id: deepseek-v4-pro
+          name: DeepSeek-V4 Pro
+          description: "专业版，能力最强"
+        - id: deepseek-chat
+          name: "DeepSeek-V3 (legacy)"
+          description: "将于 2026/07/24 弃用"
+        - id: deepseek-reasoner
+          name: "DeepSeek-R1 (legacy)"
+          description: "将于 2026/07/24 弃用"
+    - id: xiaomi
+      name: 小米 MiMo
+      api-url: https://api.xiaomimimo.com/v1/chat/completions
+      models:
+        - id: MiMo-V2.5
+          name: MiMo-V2.5
+          description: "小米主模型，通用对话"
+        - id: mimo-v2.5-pro
+          name: MiMo-V2.5 Pro
+          description: "专业版，能力更强"
+        - id: MiMo-V2-Flash
+          name: MiMo-V2 Flash
+          description: "轻量快速版"
+        - id: MiMo-V2-Pro
+          name: "MiMo-V2 Pro (legacy)"
+          description: "将于 2026/06/30 弃用"
+        - id: MiMo-V2-Omni
+          name: "MiMo-V2 Omni (legacy)"
+          description: "多模态版，将于 2026/06/30 弃用"

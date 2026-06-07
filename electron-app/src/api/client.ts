@@ -8,20 +8,22 @@ const http = axios.create({
   timeout: 120000,
 });
 
-export async function getModels(): Promise<ModelInfo[]> {
-  const res = await http.get("/api/models");
-  return res.data.models;
+export async function getProviders(): Promise<ProviderInfo[]> {
+  const res = await http.get("/api/providers");
+  return res.data.providers;
 }
 
 export async function analyzeDll(
   file: File,
   apiKey: string,
+  provider: string,
   model: string,
   onProgress?: (percent: number) => void
 ): Promise<AnalysisResult> {
   const formData = new FormData();
   formData.append("file", file);
   if (apiKey) formData.append("apiKey", apiKey);
+  if (provider) formData.append("provider", provider);
   if (model) formData.append("model", model);
 
   const res = await http.post<ApiResponse<AnalysisResult>>("/api/analyze", formData, {

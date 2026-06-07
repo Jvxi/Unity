@@ -30,15 +30,16 @@ public class AnalysisController {
         return Map.of("status", "ok", "service", "unity-vtable-analyzer");
     }
 
-    @GetMapping("/models")
-    public Map<String, Object> getModels() {
-        return Map.of("models", deepSeekService.getModels());
+    @GetMapping("/providers")
+    public Map<String, Object> getProviders() {
+        return Map.of("providers", deepSeekService.getProvidersSummary());
     }
 
     @PostMapping("/analyze")
     public ResponseEntity<Map<String, Object>> analyze(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "apiKey", required = false) String apiKey,
+            @RequestParam(value = "provider", required = false, defaultValue = "deepseek") String provider,
             @RequestParam(value = "model", required = false) String model) {
 
         try {
@@ -54,9 +55,7 @@ public class AnalysisController {
             // 3. AI 分析（可选）
             String aiSummary = null;
             if (apiKey != null && !apiKey.isBlank()) {
-                aiSummary = deepSeekService.analyzeWithAI(peInfo, vtables, apiKey, model);
-                // 将 AI 分析结果应用到各虚表
-                applyAiNotes(vtables, aiSummary);
+                aiSummary = deepSeekService.analyzeWithAI(peInfo, vtables, apiKey, provider, model);
             }
 
             // 4. 组装结果
@@ -75,18 +74,6 @@ public class AnalysisController {
             error.put("success", false);
             error.put("error", e.getMessage());
             return ResponseEntity.badRequest().body(error);
-        }
-    }
-
-    private void applyAiNotes(List<VtableInfo> vtables, String aiSummary) {
-        // 简单设置：将 AI 摘要的前 200 字符作为每个虚表的备注
-        if (aiSummary != null && vtables != null) {
-            String note = aiSummary.length() > 200 ? aiSummary.substring(0, 200) + "..." : aiSummary;
-            for (VtableInfo vt : vtables) {
-                if (vt.getAiNote() == null) {
-                    vt.setAiNote("AI: " + note);
-                }
-            }
         }
     }
 }

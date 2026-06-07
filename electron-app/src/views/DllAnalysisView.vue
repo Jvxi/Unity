@@ -32,7 +32,7 @@ async function handleUpload(file: File) {
   uploadPercent.value = 0;
   result.value = null;
   try {
-    result.value = await analyzeDll(file, store.apiKey, store.selectedModel, (p) => {
+    result.value = await analyzeDll(file, store.apiKey, store.selectedProvider, store.selectedModel, (p) => {
       uploadPercent.value = p;
     });
     ElMessage.success("分析完成");

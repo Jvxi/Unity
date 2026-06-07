@@ -1,38 +1,65 @@
 package com.jvxi.unity.service;
 
 import com.jvxi.unity.model.*;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
+@ConfigurationProperties(prefix = "ai")
 public class DeepSeekService {
 
-    @Value("${deepseek.api-url}")
-    private String apiUrl;
-
-    @Value("${deepseek.models[0].id:deepseek-chat}")
-    private String defaultModel;
-
+    private List<AiProvider> providers;
     private final WebClient webClient = WebClient.builder().build();
 
-    public List<Map<String, String>> getModels() {
-        List<Map<String, String>> models = new ArrayList<>();
-        models.add(Map.of("id", "deepseek-v4-flash", "name", "DeepSeek-V4 Flash", "description", "轻量快速，性价比高（推荐）"));
-        models.add(Map.of("id", "deepseek-v4-pro", "name", "DeepSeek-V4 Pro", "description", "专业版，能力最强"));
-        models.add(Map.of("id", "deepseek-chat", "name", "DeepSeek-V3 (legacy)", "description", "将于 2026/07/24 弃用"));
-        models.add(Map.of("id", "deepseek-reasoner", "name", "DeepSeek-R1 (legacy)", "description", "将于 2026/07/24 弃用"));
-        return models;
+    public List<AiProvider> getProviders() { return providers; }
+    public void setProviders(List<AiProvider> providers) { this.providers = providers; }
+
+    public List<Map<String, Object>> getProvidersSummary() {
+        if (providers == null) return List.of();
+        return providers.stream().map(p -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", p.getId());
+            m.put("name", p.getName());
+            m.put("models", p.getModels() != null ? p.getModels().stream().map(model -> {
+                Map<String, String> mm = new LinkedHashMap<>();
+                mm.put("id", model.getId());
+                mm.put("name", model.getName());
+                mm.put("description", model.getDescription());
+                return mm;
+            }).collect(Collectors.toList()) : List.of());
+            return m;
+        }).collect(Collectors.toList());
     }
 
-    public String analyzeWithAI(PeInfo peInfo, List<VtableInfo> vtables, String apiKey, String model) {
+    public String analyzeWithAI(PeInfo peInfo, List<VtableInfo> vtables,
+                                 String apiKey, String providerId, String modelId) {
         if (apiKey == null || apiKey.isBlank()) return null;
+
+        AiProvider provider = findProvider(providerId);
+        if (provider == null) return "未知的 AI 提供商: " + providerId;
+
+        String apiUrl = provider.getApiUrl();
+        if (modelId == null || modelId.isBlank()) {
+            modelId = provider.getModels() != null && !provider.getModels().isEmpty()
+                ? provider.getModels().get(0).getId() : "";
+        }
+
         try {
-            return callApi(buildPrompt(peInfo, vtables), apiKey, model);
+            return callApi(buildPrompt(peInfo, vtables), apiKey, apiUrl, modelId);
         } catch (Exception e) {
             return "AI 分析失败: " + e.getMessage();
         }
+    }
+
+    private AiProvider findProvider(String providerId) {
+        if (providers == null || providerId == null) return null;
+        return providers.stream()
+            .filter(p -> p.getId().equals(providerId))
+            .findFirst()
+            .orElse(null);
     }
 
     private String buildPrompt(PeInfo peInfo, List<VtableInfo> vtables) {
@@ -103,8 +130,7 @@ public class DeepSeekService {
         return sb.toString();
     }
 
-    private String callApi(String prompt, String apiKey, String model) {
-        if (model == null || model.isBlank()) model = defaultModel;
+    private String callApi(String prompt, String apiKey, String apiUrl, String model) {
         Map<String, Object> body = new HashMap<>();
         body.put("model", model);
         body.put("messages", List.of(Map.of("role", "user", "content", prompt)));
