@@ -2,82 +2,29 @@
   "name": "cat-tool",
   "version": "0.1.0",
   "description": "猫爪工具 - 二进制分析助手",
-  "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "electron:dev": "vite --config vite.config.ts",
-    "electron:build": "vite build && electron-builder --win"
+    "tauri": "tauri"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",
     "animejs": "^4.4.1",
     "axios": "^1.6.8",
-    "electron-store": "^8.2.0",
     "element-plus": "^2.6.3",
     "pinia": "^2.1.7",
     "vue": "^3.4.21",
-    "vue-router": "^4.3.0"
+    "vue-router": "^4.3.0",
+    "@tauri-apps/api": "^2"
   },
   "devDependencies": {
     "@types/node": "^20.12.7",
     "@vitejs/plugin-vue": "^5.0.4",
-    "electron": "^30.5.1",
-    "electron-builder": "^24.13.3",
     "typescript": "^5.4.5",
     "vite": "^5.2.8",
-    "vite-plugin-electron": "^0.28.6",
-    "vite-plugin-electron-renderer": "^0.14.5",
-    "vue-tsc": "^2.0.11"
-  },
-  "build": {
-    "appId": "com.jvxi.cat-tool",
-    "productName": "猫爪工具",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "dist/**/*",
-      "dist-electron/**/*"
-    ],
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "src/assets/cat-logo.png",
-      "signAndEditExecutable": false,
-      "signingHashAlgorithms": []
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
-      "installerIcon": "src/assets/cat-logo.png",
-      "uninstallerIcon": "src/assets/cat-logo.png",
-      "installerHeaderIcon": "src/assets/cat-logo.png",
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "猫爪工具",
-      "artifactName": "猫爪工具-Setup-${version}.${ext}",
-      "unicode": true
-    },
-    "publish": {
-      "provider": "github",
-      "owner": "Jvxi",
-      "repo": "Unity"
-    }
+    "vue-tsc": "^2.0.11",
+    "@tauri-apps/cli": "^2"
   },
   "author": "Jvxi"
 }
