@@ -1,5 +1,5 @@
-import axios from "axios";
-import type { ApiResponse, AnalysisResult, ModelInfo } from "@/types";
+﻿import axios from "axios";
+import type { ApiResponse, AnalysisResult } from "@/types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
@@ -8,7 +8,16 @@ const http = axios.create({
   timeout: 120000,
 });
 
-export async function getProviders(): Promise<ProviderInfo[]> {
+// 请求拦截器 - 添加Token
+http.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = Bearer ;
+  }
+  return config;
+});
+
+export async function getProviders() {
   const res = await http.get("/api/providers");
   return res.data.providers;
 }
@@ -49,3 +58,5 @@ export async function healthCheck(): Promise<boolean> {
     return false;
   }
 }
+
+export default http;

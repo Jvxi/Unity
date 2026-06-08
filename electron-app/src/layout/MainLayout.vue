@@ -1,12 +1,12 @@
-<template>
+﻿<template>
   <el-container style="height: 100vh; padding: 12px; gap: 12px;">
     <el-aside :width="isCollapsed ? '72px' : '220px'" class="sidebar" ref="sidebarRef">
       <div class="logo" ref="logoRef">
         <div class="logo-icon">
-          <el-icon :size="22"><Cpu /></el-icon>
+          <img src="@/assets/cat-logo.png" alt="猫爪工具" class="logo-img" />
         </div>
         <transition name="fade-slide">
-          <span v-show="!isCollapsed" class="logo-text">VTable Analyzer</span>
+          <span v-show="!isCollapsed" class="logo-text">猫爪工具</span>
         </transition>
       </div>
 
@@ -40,6 +40,26 @@
     <el-container class="main-area">
       <el-header class="header" ref="headerRef">
         <h2 class="page-title">{{ pageTitle }}</h2>
+        <div class="header-right">
+          <template v-if="authStore.isLoggedIn">
+            <el-dropdown>
+              <span class="user-info">
+                <el-avatar :size="32" :src="catLogo" />
+                <span class="username">{{ authStore.user?.nickname }}</span>
+              </span>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item @click="router.push('/settings')">设置</el-dropdown-item>
+                  <el-dropdown-item divided @click="handleLogout">退出登录</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </template>
+          <template v-else>
+            <el-button type="primary" @click="router.push('/login')">登录</el-button>
+            <el-button @click="router.push('/register')">注册</el-button>
+          </template>
+        </div>
       </el-header>
       <el-main class="main-content">
         <router-view v-slot="{ Component, route: r }">
@@ -54,12 +74,17 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, watch, nextTick } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useSettingsStore } from "@/stores/settings";
+import { useAuthStore } from "@/stores/auth";
 import { animate, stagger } from "animejs";
+import { ElMessage } from "element-plus";
+import catLogo from "@/assets/cat-logo.png";
 
 const route = useRoute();
+const router = useRouter();
 const store = useSettingsStore();
+const authStore = useAuthStore();
 
 const isCollapsed = computed(() => store.menuCollapsed);
 const currentRoute = computed(() => route.path);
@@ -72,6 +97,7 @@ const glowRef = ref<HTMLElement | null>(null);
 const menuItems = [
   { path: "/", icon: "HomeFilled", label: "首页" },
   { path: "/analysis", icon: "Search", label: "DLL 分析" },
+  { path: "/history", icon: "Clock", label: "历史记录" },
   { path: "/settings", icon: "Setting", label: "设置" },
 ];
 
@@ -141,10 +167,19 @@ const pageTitle = computed(() => {
   switch (route.path) {
     case "/": return "首页";
     case "/analysis": return "DLL 分析";
+    case "/history": return "历史记录";
     case "/settings": return "设置";
-    default: return "Unity";
+    case "/login": return "登录";
+    case "/register": return "注册";
+    default: return "猫爪工具";
   }
 });
+
+const handleLogout = () => {
+  authStore.logout();
+  ElMessage.success("已退出登录");
+  router.push("/");
+};
 </script>
 
 <style scoped>
@@ -178,8 +213,13 @@ const pageTitle = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #052e16;
   flex-shrink: 0;
+  overflow: hidden;
+}
+.logo-img {
+  width: 28px;
+  height: 28px;
+  object-fit: cover;
 }
 .logo-text {
   color: #e2e8f0;
@@ -286,6 +326,7 @@ const pageTitle = computed(() => {
   height: 56px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 28px;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
@@ -296,19 +337,32 @@ const pageTitle = computed(() => {
   color: var(--color-text);
   letter-spacing: -0.2px;
 }
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.username {
+  font-size: 14px;
+  color: var(--color-text);
+}
 .main-content {
   background: var(--color-bg);
   padding: 20px;
   overflow-y: auto;
 }
 
-/* 路由过渡 */
 .page-slide-enter-active { transition: all 0.3s var(--transition-smooth); }
 .page-slide-leave-active { transition: all 0.18s var(--transition-smooth); }
 .page-slide-enter-from { opacity: 0; transform: translateY(14px) scale(0.99); }
 .page-slide-leave-to { opacity: 0; transform: translateY(-6px) scale(0.99); }
 
-/* 文字淡入 */
 .fade-slide-enter-active { transition: all 0.25s var(--transition-smooth); }
 .fade-slide-leave-active { transition: all 0.15s var(--transition-smooth); }
 .fade-slide-enter-from { opacity: 0; transform: translateX(-6px); }

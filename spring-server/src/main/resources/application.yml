@@ -1,56 +1,94 @@
-server:
+﻿server:
   port: 8080
-  servlet:
-    multipart:
-      max-file-size: 200MB
-      max-request-size: 200MB
   tomcat:
-    max-http-form-post-size: 200MB
-    max-swallow-size: 200MB
+    max-threads: 200
+    min-spare-threads: 20
+    accept-count: 100
+    connection-timeout: 10000
+    max-connections: 8192
+    protocol:
+      max-http-form-post-size: 10MB
 
 spring:
-  application:
-    name: unity-vtable-analyzer
-  servlet:
-    multipart:
-      max-file-size: 200MB
-      max-request-size: 200MB
-      enabled: true
+  jackson:
+    serialization:
+      indent-output: true
+    deserialization:
+      fail-on-missing-creator-properties: false
+  datasource:
+    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME:cat_tool}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${DB_USER:root}
+    password: ${DB_PASS:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 10000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Asia/Shanghai
+        jdbc.batch_size: 50
+        jdbc.batch_versioned_data: true
+        order_inserts: true
+        order_updates: true
+        generate_statistics: false
+  mail:
+    host: smtp.126.com
+    port: 465
+    username: your-email@126.com
+    password: "your-smtp-auth-code"
+    protocol: smtp
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+          starttls:
+            enable: false
+            required: false
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 10000
 
-ai:
-  providers:
-    - id: deepseek
-      name: DeepSeek
-      api-url: https://api.deepseek.com/chat/completions
-      models:
-        - id: deepseek-v4-flash
-          name: DeepSeek-V4 Flash
-          description: "轻量快速，性价比高（推荐）"
-        - id: deepseek-v4-pro
-          name: DeepSeek-V4 Pro
-          description: "专业版，能力最强"
-        - id: deepseek-chat
-          name: "DeepSeek-V3 (legacy)"
-          description: "将于 2026/07/24 弃用"
-        - id: deepseek-reasoner
-          name: "DeepSeek-R1 (legacy)"
-          description: "将于 2026/07/24 弃用"
-    - id: xiaomi
-      name: 小米 MiMo
-      api-url: https://api.xiaomimimo.com/v1/chat/completions
-      models:
-        - id: MiMo-V2.5
-          name: MiMo-V2.5
-          description: "小米主模型，通用对话"
-        - id: mimo-v2.5-pro
-          name: MiMo-V2.5 Pro
-          description: "专业版，能力更强"
-        - id: MiMo-V2-Flash
-          name: MiMo-V2 Flash
-          description: "轻量快速版"
-        - id: MiMo-V2-Pro
-          name: "MiMo-V2 Pro (legacy)"
-          description: "将于 2026/06/30 弃用"
-        - id: MiMo-V2-Omni
-          name: "MiMo-V2 Omni (legacy)"
-          description: "多模态版，将于 2026/06/30 弃用"
+cat-tool:
+  auth:
+    token-ttl-hours: 168
+    jwt-secret: ${JWT_SECRET:LHSamRU/pbitWE93f1bhrOdDTWdHu+aXUkUH4z2bb14=}
+  mail:
+    from: your-email@126.com
+    from-name: "猫爪工具"
+    code-ttl-minutes: 3
+    cooldown-seconds: 60
+  verification:
+    code-length: 6
+    code-chars: "3456789ABCDEFGHJKMNPQRSTUVWXY"
+
+logging:
+  level:
+    root: INFO
+    com.jvxi.unity: INFO
+    org.springframework.web: WARN
+    org.hibernate.SQL: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/cat-tool.log
+    max-size: 10MB
+    max-history: 30
