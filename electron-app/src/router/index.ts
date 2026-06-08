@@ -1,5 +1,7 @@
 ﻿import { createRouter, createWebHashHistory } from "vue-router";
 
+const publicRoutes = ["/login", "/register"];
+
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [
@@ -44,6 +46,17 @@ const router = createRouter({
       component: () => import("../views/SettingsView.vue"),
     },
   ],
+});
+
+router.beforeEach((to, _from, next) => {
+  const token = localStorage.getItem("token");
+  if (!publicRoutes.includes(to.path) && !token) {
+    next("/login");
+  } else if (to.path === "/login" && token) {
+    next("/");
+  } else {
+    next();
+  }
 });
 
 export default router;
