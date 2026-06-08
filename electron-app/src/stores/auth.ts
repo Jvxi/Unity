@@ -1,4 +1,4 @@
-﻿import { defineStore } from 'pinia'
+import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '@/api/client'
 
@@ -9,7 +9,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoggedIn = computed(() => !!token.value)
 
   async function login(loginStr: string, password: string) {
-    const res = await api.post('/auth/login', { login: loginStr, password })
+    const res = await api.post('/api/auth/login', { login: loginStr, password })
     if (res.data.success) {
       token.value = res.data.token
       user.value = res.data.user
@@ -21,7 +21,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function register(nickname: string, email: string, password: string, code: string) {
-    const res = await api.post('/auth/register', { nickname, email, password, code })
+    const res = await api.post('/api/auth/register', { nickname, email, password, code })
     if (res.data.success) {
       token.value = res.data.token
       user.value = res.data.user
@@ -33,7 +33,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function sendCode(email: string, purpose: string) {
-    const res = await api.post('/auth/send-code', { email, purpose })
+    const res = await api.post('/api/auth/send-code', { email, purpose })
     if (!res.data.success) {
       throw new Error(res.data.error)
     }

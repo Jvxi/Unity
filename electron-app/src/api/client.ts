@@ -1,7 +1,7 @@
-﻿import axios from "axios";
+import axios from "axios";
 import type { ApiResponse, AnalysisResult } from "@/types";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:38765";
 
 const http = axios.create({
   baseURL: API_BASE,
@@ -97,7 +97,7 @@ export async function hexDump(
 }
 
 export function getExportUrl(format: "json" | "html") {
-  const base = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+  const base = import.meta.env.VITE_API_BASE_URL || "http://localhost:38765";
   return base + "/api/tools/export/" + format;
 }
 

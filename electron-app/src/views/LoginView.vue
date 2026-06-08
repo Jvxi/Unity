@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="auth-page">
     <div class="bg-pattern"></div>
     <div class="brand-panel">

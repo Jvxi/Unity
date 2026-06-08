@@ -38,3 +38,6 @@ vite*.log
 *.swp
 # Electron build
 release/
+
+# Protect credentials
+spring-server/src/main/resources/application.yml
