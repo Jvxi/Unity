@@ -151,34 +151,34 @@ const handleRegister = async () => {
 .auth-page {
   min-height: 100vh;
   display: flex;
-  background: #0c0e14;
+  background: #f0f2f5;
 }
 
 .brand-panel {
   flex: 0 0 40%;
-  background: linear-gradient(160deg, #111318 0%, #0f1117 50%, #13161d 100%);
+  background: linear-gradient(160deg, #e8f5e9 0%, #f1f8f2 40%, #e0f2f1 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 60px 48px;
   position: relative;
   overflow: hidden;
-  border-right: 1px solid rgba(255,255,255,0.04);
+  border-right: 1px solid rgba(0,0,0,0.05);
 }
 .brand-panel::before {
   content: '';
   position: absolute;
-  top: -200px; right: -200px;
-  width: 500px; height: 500px;
-  background: radial-gradient(circle, rgba(74,222,128,0.06) 0%, transparent 70%);
+  top: -120px; right: -120px;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(74,222,128,0.15) 0%, transparent 70%);
   pointer-events: none;
 }
 .brand-panel::after {
   content: '';
   position: absolute;
-  bottom: -150px; left: -100px;
-  width: 400px; height: 400px;
-  background: radial-gradient(circle, rgba(34,211,238,0.04) 0%, transparent 70%);
+  bottom: -100px; left: -80px;
+  width: 350px; height: 350px;
+  background: radial-gradient(circle, rgba(56,189,248,0.1) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -198,13 +198,14 @@ const handleRegister = async () => {
   border-radius: 16px;
   overflow: hidden;
   margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
 }
 .brand-logo img { width: 100%; height: 100%; object-fit: cover; }
 
 .brand-title {
   font-size: 28px;
   font-weight: 700;
-  color: #f1f5f9;
+  color: #1a1a2e;
   margin-bottom: 10px;
   letter-spacing: -0.5px;
 }
@@ -225,21 +226,22 @@ const handleRegister = async () => {
   align-items: center;
   gap: 14px;
   padding: 14px 16px;
-  background: rgba(255,255,255,0.025);
-  border: 1px solid rgba(255,255,255,0.05);
+  background: rgba(255,255,255,0.6);
+  border: 1px solid rgba(0,0,0,0.06);
   border-radius: 12px;
   transition: all 0.3s;
 }
 .step-card:hover {
-  background: rgba(255,255,255,0.04);
-  border-color: rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.85);
+  border-color: rgba(0,0,0,0.1);
   transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
 }
 .step-num {
   width: 36px; height: 36px;
   border-radius: 10px;
   background: rgba(74,222,128,0.12);
-  color: #4ade80;
+  color: #16a34a;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -250,12 +252,12 @@ const handleRegister = async () => {
 .step-info h3 {
   font-size: 13px;
   font-weight: 600;
-  color: #e2e8f0;
+  color: #1e293b;
   margin-bottom: 2px;
 }
 .step-info p {
   font-size: 12px;
-  color: #64748b;
+  color: #94a3b8;
 }
 
 .form-panel {
@@ -264,7 +266,7 @@ const handleRegister = async () => {
   align-items: center;
   justify-content: center;
   padding: 48px 48px;
-  background: #0f1117;
+  background: #ffffff;
 }
 .form-wrapper {
   width: 100%;
@@ -277,12 +279,12 @@ const handleRegister = async () => {
 .form-header h2 {
   font-size: 24px;
   font-weight: 700;
-  color: #f1f5f9;
+  color: #1a1a2e;
   margin-bottom: 6px;
 }
 .form-header p {
   font-size: 14px;
-  color: #64748b;
+  color: #94a3b8;
 }
 
 .form-row {
@@ -292,25 +294,28 @@ const handleRegister = async () => {
 .form-col { flex: 1; min-width: 0; }
 
 .auth-form :deep(.el-form-item__label) {
-  color: #94a3b8 !important;
+  color: #475569 !important;
   font-size: 13px;
   font-weight: 500;
 }
 .auth-form :deep(.el-input__wrapper) {
-  background: rgba(255,255,255,0.04) !important;
-  border: 1px solid rgba(255,255,255,0.08) !important;
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
   box-shadow: none !important;
   border-radius: 10px !important;
   height: 44px;
-  transition: border-color 0.25s;
+  transition: border-color 0.25s, background 0.25s;
 }
-.auth-form :deep(.el-input__wrapper:hover),
+.auth-form :deep(.el-input__wrapper:hover) {
+  border-color: #cbd5e1 !important;
+}
 .auth-form :deep(.el-input__wrapper.is-focus) {
-  border-color: rgba(74,222,128,0.4) !important;
+  border-color: #4ade80 !important;
+  background: #ffffff !important;
 }
-.auth-form :deep(.el-input__inner) { color: #e2e8f0; }
-.auth-form :deep(.el-input__inner::placeholder) { color: #475569; }
-.auth-form :deep(.el-input__prefix .el-icon) { color: #64748b; }
+.auth-form :deep(.el-input__inner) { color: #1e293b; }
+.auth-form :deep(.el-input__inner::placeholder) { color: #94a3b8; }
+.auth-form :deep(.el-input__prefix .el-icon) { color: #94a3b8; }
 
 .code-input {
   display: flex;
@@ -321,19 +326,20 @@ const handleRegister = async () => {
 .code-btn {
   flex-shrink: 0;
   border-radius: 10px !important;
-  background: rgba(255,255,255,0.06) !important;
-  border: 1px solid rgba(255,255,255,0.1) !important;
-  color: #4ade80 !important;
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  color: #16a34a !important;
   font-weight: 500;
   transition: all 0.25s;
 }
 .code-btn:hover:not(:disabled) {
-  background: rgba(74,222,128,0.12) !important;
-  border-color: rgba(74,222,128,0.3) !important;
+  background: #dcfce7 !important;
+  border-color: #86efac !important;
 }
 .code-btn:disabled {
-  color: #475569 !important;
-  border-color: rgba(255,255,255,0.05) !important;
+  color: #94a3b8 !important;
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
 }
 
 .auth-btn {
@@ -347,26 +353,26 @@ const handleRegister = async () => {
   color: #052e16 !important;
   letter-spacing: 0.5px;
   transition: all 0.3s;
-  box-shadow: 0 4px 20px rgba(74,222,128,0.2);
+  box-shadow: 0 4px 16px rgba(74,222,128,0.25);
 }
 .auth-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 28px rgba(74,222,128,0.3) !important;
+  box-shadow: 0 6px 24px rgba(74,222,128,0.35) !important;
 }
 
 .auth-footer {
   text-align: center;
   margin-top: 24px;
-  color: #64748b;
+  color: #94a3b8;
   font-size: 13px;
 }
 .auth-footer a {
-  color: #4ade80;
+  color: #16a34a;
   text-decoration: none;
   margin-left: 4px;
   font-weight: 500;
 }
-.auth-footer a:hover { color: #86efac; }
+.auth-footer a:hover { color: #22c55e; }
 
 @media (max-width: 900px) {
   .brand-panel { display: none; }
