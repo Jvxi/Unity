@@ -1,50 +1,74 @@
 <template>
-  <div class="auth-container">
-    <div class="bg-orbs">
-      <div class="orb orb-1"></div>
-      <div class="orb orb-2"></div>
-      <div class="orb orb-3"></div>
-    </div>
-    <div class="auth-card">
-      <div class="card-glow"></div>
-      <div class="auth-header">
-        <div class="logo-wrapper">
-          <img src="@/assets/cat-logo.png" alt="猫爪工具" class="auth-logo" />
-          <div class="logo-ring"></div>
+  <div class="auth-page">
+    <div class="brand-panel">
+      <div class="brand-content">
+        <div class="brand-logo">
+          <img src="@/assets/cat-logo.png" alt="猫爪工具" />
         </div>
-        <h1>猫爪工具</h1>
-        <p class="subtitle">二进制分析助手</p>
-      </div>
-
-      <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="auth-form">
-        <el-form-item label="昵称或邮箱" prop="login">
-          <el-input v-model="form.login" placeholder="请输入昵称或邮箱" size="large" prefix-icon="User" />
-        </el-form-item>
-
-        <el-form-item label="密码" prop="password">
-          <el-input v-model="form.password" type="password" placeholder="请输入密码" size="large" prefix-icon="Lock" show-password />
-        </el-form-item>
-
-        <el-form-item>
-          <el-button type="primary" size="large" class="auth-btn" :loading="loading" @click="handleLogin">
-            登录
-          </el-button>
-        </el-form-item>
-      </el-form>
-
-      <div class="auth-footer">
-        <span>还没有账号？</span>
-        <router-link to="/register">立即注册</router-link>
+        <h1 class="brand-title">猫爪工具</h1>
+        <p class="brand-desc">专业的二进制文件分析助手，集 PE 解析、虚表检测、AI 智能分析于一体</p>
+        <div class="feature-cards">
+          <div class="feat-card">
+            <div class="feat-icon" style="background:rgba(34,197,94,0.12);color:#4ade80">
+              <el-icon :size="20"><Search /></el-icon>
+            </div>
+            <div class="feat-info">
+              <h3>PE 深度解析</h3>
+              <p>全面解析 PE 结构，提取虚表地址</p>
+            </div>
+          </div>
+          <div class="feat-card">
+            <div class="feat-icon" style="background:rgba(34,211,238,0.12);color:#22d3ee">
+              <el-icon :size="20"><MagicStick /></el-icon>
+            </div>
+            <div class="feat-info">
+              <h3>AI 辅助分析</h3>
+              <p>大模型智能确认虚表，排除误报</p>
+            </div>
+          </div>
+          <div class="feat-card">
+            <div class="feat-icon" style="background:rgba(167,139,250,0.12);color:#a78bfa">
+              <el-icon :size="20"><Document /></el-icon>
+            </div>
+            <div class="feat-info">
+              <h3>报告导出</h3>
+              <p>一键导出 JSON / HTML 分析报告</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-    <div class="brand-footer">
-      <span>Cat Paw Tool v0.1</span>
+
+    <div class="form-panel">
+      <div class="form-wrapper">
+        <div class="form-header">
+          <h2>欢迎回来</h2>
+          <p>登录您的账号以继续使用</p>
+        </div>
+        <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="auth-form">
+          <el-form-item label="昵称或邮箱" prop="login">
+            <el-input v-model="form.login" placeholder="请输入昵称或邮箱" size="large" prefix-icon="User" />
+          </el-form-item>
+          <el-form-item label="密码" prop="password">
+            <el-input v-model="form.password" type="password" placeholder="请输入密码" size="large" prefix-icon="Lock" show-password />
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" size="large" class="auth-btn" :loading="loading" @click="handleLogin">
+              登录
+            </el-button>
+          </el-form-item>
+        </el-form>
+        <div class="auth-footer">
+          <span>还没有账号？</span>
+          <router-link to="/register">立即注册</router-link>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
@@ -54,11 +78,7 @@ const authStore = useAuthStore()
 const formRef = ref()
 const loading = ref(false)
 
-const form = reactive({
-  login: '',
-  password: ''
-})
-
+const form = reactive({ login: '', password: '' })
 const rules = {
   login: [{ required: true, message: '请输入昵称或邮箱', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
@@ -80,112 +100,141 @@ const handleLogin = async () => {
 </script>
 
 <style scoped>
-.auth-container {
+.auth-page {
   min-height: 100vh;
+  display: flex;
+  background: #0c0e14;
+}
+
+.brand-panel {
+  flex: 0 0 45%;
+  background: linear-gradient(160deg, #111318 0%, #0f1117 50%, #13161d 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0f1117;
+  padding: 60px 48px;
   position: relative;
   overflow: hidden;
+  border-right: 1px solid rgba(255,255,255,0.04);
 }
-
-.bg-orbs { position: absolute; inset: 0; pointer-events: none; }
-.orb {
+.brand-panel::before {
+  content: '';
   position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.4;
+  top: -200px; right: -200px;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(74,222,128,0.06) 0%, transparent 70%);
+  pointer-events: none;
 }
-.orb-1 {
+.brand-panel::after {
+  content: '';
+  position: absolute;
+  bottom: -150px; left: -100px;
   width: 400px; height: 400px;
-  background: #4ade80;
-  top: -10%; left: -5%;
-  animation: float1 12s ease-in-out infinite;
-}
-.orb-2 {
-  width: 300px; height: 300px;
-  background: #22d3ee;
-  bottom: -8%; right: -3%;
-  animation: float2 15s ease-in-out infinite;
-}
-.orb-3 {
-  width: 250px; height: 250px;
-  background: #a78bfa;
-  top: 50%; left: 60%;
-  animation: float3 18s ease-in-out infinite;
-}
-@keyframes float1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(60px,40px); } }
-@keyframes float2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-50px,-30px); } }
-@keyframes float3 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-40px,50px); } }
-
-.auth-card {
-  position: relative;
-  background: rgba(255,255,255,0.03);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 20px;
-  padding: 44px 40px 36px;
-  width: 420px;
-  box-shadow: 0 24px 80px rgba(0,0,0,0.4);
-  z-index: 1;
-  animation: cardIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-.card-glow {
-  position: absolute;
-  top: -1px; left: 50%; transform: translateX(-50%);
-  width: 60%; height: 2px;
-  background: linear-gradient(90deg, transparent, #4ade80, transparent);
-  border-radius: 2px;
-}
-@keyframes cardIn {
-  from { opacity: 0; transform: translateY(24px) scale(0.97); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  background: radial-gradient(circle, rgba(34,211,238,0.04) 0%, transparent 70%);
+  pointer-events: none;
 }
 
-.auth-header {
-  text-align: center;
-  margin-bottom: 32px;
-}
-.logo-wrapper {
-  position: relative;
-  display: inline-block;
-  margin-bottom: 16px;
-}
-.auth-logo {
-  width: 72px; height: 72px;
-  border-radius: 18px;
-  object-fit: cover;
+.brand-content {
+  max-width: 400px;
   position: relative;
   z-index: 1;
+  animation: fadeUp 0.7s cubic-bezier(0.16,1,0.3,1) both;
 }
-.logo-ring {
-  position: absolute;
-  inset: -4px;
-  border-radius: 22px;
-  background: linear-gradient(135deg, #4ade80, #22d3ee);
-  opacity: 0.5;
-  filter: blur(8px);
-  z-index: 0;
-  animation: pulse 3s ease-in-out infinite;
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-@keyframes pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 0.6; } }
 
-.auth-header h1 {
-  font-size: 22px;
+.brand-logo {
+  width: 64px; height: 64px;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.brand-logo img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+
+.brand-title {
+  font-size: 28px;
   font-weight: 700;
   color: #f1f5f9;
-  margin-bottom: 4px;
-  letter-spacing: -0.3px;
+  margin-bottom: 10px;
+  letter-spacing: -0.5px;
 }
-.subtitle {
+.brand-desc {
+  font-size: 14px;
   color: #64748b;
-  font-size: 13px;
-  font-weight: 400;
+  line-height: 1.7;
+  margin-bottom: 36px;
 }
 
-.auth-form { margin-bottom: 20px; }
+.feature-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.feat-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px;
+  transition: all 0.3s;
+}
+.feat-card:hover {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.08);
+  transform: translateX(4px);
+}
+.feat-icon {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.feat-info h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin-bottom: 2px;
+}
+.feat-info p {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.form-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 48px;
+  background: #0f1117;
+}
+.form-wrapper {
+  width: 100%;
+  max-width: 400px;
+  animation: fadeUp 0.7s 0.15s cubic-bezier(0.16,1,0.3,1) both;
+}
+.form-header {
+  margin-bottom: 32px;
+}
+.form-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-bottom: 6px;
+}
+.form-header p {
+  font-size: 14px;
+  color: #64748b;
+}
+
 .auth-form :deep(.el-form-item__label) {
   color: #94a3b8 !important;
   font-size: 13px;
@@ -203,15 +252,9 @@ const handleLogin = async () => {
 .auth-form :deep(.el-input__wrapper.is-focus) {
   border-color: rgba(74,222,128,0.4) !important;
 }
-.auth-form :deep(.el-input__inner) {
-  color: #e2e8f0;
-}
-.auth-form :deep(.el-input__inner::placeholder) {
-  color: #475569;
-}
-.auth-form :deep(.el-input__prefix .el-icon) {
-  color: #64748b;
-}
+.auth-form :deep(.el-input__inner) { color: #e2e8f0; }
+.auth-form :deep(.el-input__inner::placeholder) { color: #475569; }
+.auth-form :deep(.el-input__prefix .el-icon) { color: #64748b; }
 
 .auth-btn {
   width: 100%;
@@ -224,18 +267,16 @@ const handleLogin = async () => {
   color: #052e16 !important;
   letter-spacing: 0.5px;
   transition: all 0.3s;
-  box-shadow: 0 4px 20px rgba(74,222,128,0.25);
+  box-shadow: 0 4px 20px rgba(74,222,128,0.2);
 }
 .auth-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 28px rgba(74,222,128,0.35) !important;
-}
-.auth-btn:active {
-  transform: translateY(0);
+  box-shadow: 0 6px 28px rgba(74,222,128,0.3) !important;
 }
 
 .auth-footer {
   text-align: center;
+  margin-top: 24px;
   color: #64748b;
   font-size: 13px;
 }
@@ -244,19 +285,11 @@ const handleLogin = async () => {
   text-decoration: none;
   margin-left: 4px;
   font-weight: 500;
-  transition: color 0.2s;
 }
-.auth-footer a:hover {
-  color: #86efac;
-}
+.auth-footer a:hover { color: #86efac; }
 
-.brand-footer {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: #334155;
-  font-size: 11px;
-  letter-spacing: 0.5px;
+@media (max-width: 900px) {
+  .brand-panel { display: none; }
+  .form-panel { padding: 40px 24px; }
 }
 </style>
