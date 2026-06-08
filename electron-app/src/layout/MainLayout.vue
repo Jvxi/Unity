@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <el-container style="height: 100vh; padding: 12px; gap: 12px;">
     <el-aside :width="isCollapsed ? '72px' : '220px'" class="sidebar" ref="sidebarRef">
       <div class="logo" ref="logoRef">
@@ -55,10 +55,6 @@
               </template>
             </el-dropdown>
           </template>
-          <template v-else>
-            <el-button type="primary" @click="router.push('/login')">登录</el-button>
-            <el-button @click="router.push('/register')">注册</el-button>
-          </template>
         </div>
       </el-header>
       <el-main class="main-content">
@@ -97,6 +93,8 @@ const glowRef = ref<HTMLElement | null>(null);
 const menuItems = [
   { path: "/", icon: "HomeFilled", label: "首页" },
   { path: "/analysis", icon: "Search", label: "DLL 分析" },
+  { path: "/strings", icon: "Document", label: "字符串提取" },
+  { path: "/hex", icon: "Grid", label: "十六进制查看" },
   { path: "/history", icon: "Clock", label: "历史记录" },
   { path: "/settings", icon: "Setting", label: "设置" },
 ];
@@ -167,10 +165,10 @@ const pageTitle = computed(() => {
   switch (route.path) {
     case "/": return "首页";
     case "/analysis": return "DLL 分析";
+    case "/strings": return "字符串提取";
+    case "/hex": return "十六进制查看";
     case "/history": return "历史记录";
     case "/settings": return "设置";
-    case "/login": return "登录";
-    case "/register": return "注册";
     default: return "猫爪工具";
   }
 });
