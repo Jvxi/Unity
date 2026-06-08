@@ -1,15 +1,10 @@
-﻿import { createRouter, createWebHashHistory } from "vue-router";
+import { createRouter, createWebHashHistory } from "vue-router";
 
 const publicRoutes = ["/login", "/register"];
 
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [
-    {
-      path: "/",
-      name: "home",
-      component: () => import("../views/HomeView.vue"),
-    },
     {
       path: "/login",
       name: "login",
@@ -21,29 +16,40 @@ const router = createRouter({
       component: () => import("../views/RegisterView.vue"),
     },
     {
-      path: "/analysis",
-      name: "analysis",
-      component: () => import("../views/DllAnalysisView.vue"),
-    },
-    {
-      path: "/strings",
-      name: "strings",
-      component: () => import("../views/StringsView.vue"),
-    },
-    {
-      path: "/hex",
-      name: "hex",
-      component: () => import("../views/HexView.vue"),
-    },
-    {
-      path: "/history",
-      name: "history",
-      component: () => import("../views/HistoryView.vue"),
-    },
-    {
-      path: "/settings",
-      name: "settings",
-      component: () => import("../views/SettingsView.vue"),
+      path: "/",
+      component: () => import("../layout/MainLayout.vue"),
+      children: [
+        {
+          path: "",
+          name: "home",
+          component: () => import("../views/HomeView.vue"),
+        },
+        {
+          path: "analysis",
+          name: "analysis",
+          component: () => import("../views/DllAnalysisView.vue"),
+        },
+        {
+          path: "strings",
+          name: "strings",
+          component: () => import("../views/StringsView.vue"),
+        },
+        {
+          path: "hex",
+          name: "hex",
+          component: () => import("../views/HexView.vue"),
+        },
+        {
+          path: "history",
+          name: "history",
+          component: () => import("../views/HistoryView.vue"),
+        },
+        {
+          path: "settings",
+          name: "settings",
+          component: () => import("../views/SettingsView.vue"),
+        },
+      ],
     },
   ],
 });
@@ -52,7 +58,7 @@ router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem("token");
   if (!publicRoutes.includes(to.path) && !token) {
     next("/login");
-  } else if (to.path === "/login" && token) {
+  } else if ((to.path === "/login" || to.path === "/register") && token) {
     next("/");
   } else {
     next();
