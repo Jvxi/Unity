@@ -11,7 +11,8 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
     },
-    title: "Unity - DLL VTable Analyzer",
+    title: "猫爪工具 - 二进制分析助手",
+    icon: join(__dirname, "../src/assets/cat-logo.png"),
   });
 
   if (process.env.VITE_DEV_SERVER_URL) {

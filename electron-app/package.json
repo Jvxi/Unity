@@ -1,7 +1,7 @@
 {
-  "name": "unity-vtable-analyzer",
+  "name": "cat-tool",
   "version": "0.1.0",
-  "description": "DLL VTable Analyzer - Electron + Vue 3",
+  "description": "猫爪工具 - 二进制分析助手",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
@@ -32,8 +32,8 @@
     "vue-tsc": "^2.0.11"
   },
   "build": {
-    "appId": "com.jvxi.vtable-analyzer",
-    "productName": "VTable Analyzer",
+    "appId": "com.jvxi.cat-tool",
+    "productName": "猫爪工具",
     "directories": {
       "output": "release"
     },
@@ -56,7 +56,7 @@
           ]
         }
       ],
-      "icon": null,
+      "icon": "src/assets/cat-logo.png",
       "signAndEditExecutable": false,
       "signingHashAlgorithms": []
     },
@@ -64,13 +64,13 @@
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": null,
-      "uninstallerIcon": null,
-      "installerHeaderIcon": null,
+      "installerIcon": "src/assets/cat-logo.png",
+      "uninstallerIcon": "src/assets/cat-logo.png",
+      "installerHeaderIcon": "src/assets/cat-logo.png",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "VTable Analyzer",
-      "artifactName": "VTable-Analyzer-Setup-${version}.${ext}",
+      "shortcutName": "猫爪工具",
+      "artifactName": "猫爪工具-Setup-${version}.${ext}",
       "unicode": true
     },
     "publish": {
