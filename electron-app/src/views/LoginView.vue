@@ -1,5 +1,6 @@
 <template>
   <div class="auth-page">
+    <div class="bg-pattern"></div>
     <div class="brand-panel">
       <div class="brand-content">
         <div class="brand-logo">
@@ -104,6 +105,18 @@ const handleLogin = async () => {
   min-height: 100vh;
   display: flex;
   background: #f0f2f5;
+  position: relative;
+}
+
+.bg-pattern {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(74,222,128,0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(56,189,248,0.06) 0%, transparent 40%),
+    radial-gradient(circle at 60% 80%, rgba(139,92,246,0.05) 0%, transparent 40%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .brand-panel {
@@ -116,6 +129,7 @@ const handleLogin = async () => {
   position: relative;
   overflow: hidden;
   border-right: 1px solid rgba(0,0,0,0.05);
+  z-index: 1;
 }
 .brand-panel::before {
   content: '';
@@ -214,7 +228,10 @@ const handleLogin = async () => {
   align-items: center;
   justify-content: center;
   padding: 60px 48px;
-  background: #ffffff;
+  background: rgba(255,255,255,0.55);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  z-index: 1;
 }
 .form-wrapper {
   width: 100%;
@@ -241,19 +258,20 @@ const handleLogin = async () => {
   font-weight: 500;
 }
 .auth-form :deep(.el-input__wrapper) {
-  background: #f8fafc !important;
-  border: 1px solid #e2e8f0 !important;
+  background: rgba(255,255,255,0.6) !important;
+  border: 1px solid rgba(0,0,0,0.08) !important;
   box-shadow: none !important;
   border-radius: 10px !important;
   height: 44px;
+  backdrop-filter: blur(8px);
   transition: border-color 0.25s, background 0.25s;
 }
 .auth-form :deep(.el-input__wrapper:hover) {
-  border-color: #cbd5e1 !important;
+  border-color: rgba(0,0,0,0.12) !important;
 }
 .auth-form :deep(.el-input__wrapper.is-focus) {
   border-color: #4ade80 !important;
-  background: #ffffff !important;
+  background: rgba(255,255,255,0.8) !important;
 }
 .auth-form :deep(.el-input__inner) { color: #1e293b; }
 .auth-form :deep(.el-input__inner::placeholder) { color: #94a3b8; }
