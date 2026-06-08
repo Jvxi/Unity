@@ -1,8 +1,20 @@
-<template>
+﻿<template>
   <div class="analysis">
     <FileUploader :loading="loading" @upload="handleUpload" />
     <AnalysisProgress v-if="loading" :percent="uploadPercent" />
     <template v-if="result">
+      <!-- 导出按钮栏 -->
+      <el-card class="export-bar" shadow="never">
+        <div class="export-row">
+          <span class="export-label">导出报告</span>
+          <el-button size="small" @click="doExport('json')">
+            <el-icon><Download /></el-icon> JSON
+          </el-button>
+          <el-button size="small" @click="doExport('html')">
+            <el-icon><Download /></el-icon> HTML
+          </el-button>
+        </div>
+      </el-card>
       <PeInfoPanel :pe-info="result.peInfo" />
       <VtableResult :vtables="result.vtables" :ai-summary="result.aiSummary" />
     </template>
@@ -13,7 +25,7 @@
 import { ref, nextTick } from "vue";
 import { ElMessage } from "element-plus";
 import { animate, stagger } from "animejs";
-import { analyzeDll } from "@/api/client";
+import { analyzeDll, getExportUrl } from "@/api/client";
 import { useSettingsStore } from "@/stores/settings";
 import type { AnalysisResult } from "@/types";
 import FileUploader from "@/components/FileUploader.vue";
@@ -25,11 +37,13 @@ const store = useSettingsStore();
 const loading = ref(false);
 const uploadPercent = ref(0);
 const result = ref<AnalysisResult | null>(null);
+const uploadedFile = ref<File | null>(null);
 
 async function handleUpload(file: File) {
   loading.value = true;
   uploadPercent.value = 0;
   result.value = null;
+  uploadedFile.value = file;
   try {
     result.value = await analyzeDll(file, store.apiKey, store.selectedProvider, store.selectedModel, (p) => {
       uploadPercent.value = p;
@@ -41,6 +55,51 @@ async function handleUpload(file: File) {
   } finally {
     loading.value = false;
   }
+}
+
+function doExport(format: "json" | "html") {
+  if (!uploadedFile.value) return;
+  const url = getExportUrl(format);
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = url;
+  form.target = "_blank";
+  form.style.display = "none";
+
+  const addField = (name: string, value: string) => {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = name;
+    input.value = value;
+    form.appendChild(input);
+  };
+
+  addField("file", ""); // 文件需要通过 FormData，此处用 download.js 方案
+  form.remove();
+
+  // 改用 fetch + blob 下载
+  const fd = new FormData();
+  fd.append("file", uploadedFile.value);
+  if (store.apiKey) {
+    fd.append("apiKey", store.apiKey);
+    fd.append("provider", store.selectedProvider);
+    fd.append("model", store.selectedModel);
+  }
+
+  fetch(url, { method: "POST", body: fd })
+    .then((res) => {
+      if (!res.ok) throw new Error("导出失败");
+      return res.blob();
+    })
+    .then((blob) => {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = format === "json" ? "report.json" : "report.html";
+      a.click();
+      URL.revokeObjectURL(a.href);
+      ElMessage.success("导出成功");
+    })
+    .catch((e) => ElMessage.error(e.message || "导出失败"));
 }
 
 function animateResult() {
@@ -60,4 +119,7 @@ function animateResult() {
 
 <style scoped>
 .analysis { display: flex; flex-direction: column; gap: 20px; }
+.export-bar { border-radius: var(--radius-lg); }
+.export-row { display: flex; align-items: center; gap: 12px; }
+.export-label { font-size: 13px; font-weight: 600; color: var(--color-text-secondary); }
 </style>

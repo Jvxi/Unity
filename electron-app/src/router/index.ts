@@ -24,6 +24,16 @@ const router = createRouter({
       component: () => import("../views/DllAnalysisView.vue"),
     },
     {
+      path: "/strings",
+      name: "strings",
+      component: () => import("../views/StringsView.vue"),
+    },
+    {
+      path: "/hex",
+      name: "hex",
+      component: () => import("../views/HexView.vue"),
+    },
+    {
       path: "/history",
       name: "history",
       component: () => import("../views/HistoryView.vue"),

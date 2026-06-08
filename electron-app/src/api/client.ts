@@ -59,4 +59,46 @@ export async function healthCheck(): Promise<boolean> {
   }
 }
 
+
+export async function extractStrings(
+  file: File,
+  minLength: number = 4,
+  encoding: string = "all",
+  keyword?: string
+) {
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("minLength", String(minLength));
+  fd.append("encoding", encoding);
+  if (keyword) fd.append("keyword", keyword);
+  const res = await http.post("/api/tools/strings", fd, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  if (!res.data.success) throw new Error(res.data.error || "提取失败");
+  return res.data.data;
+}
+
+export async function hexDump(
+  file: File,
+  offset: number = 0,
+  length: number = 0,
+  search?: string
+) {
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("offset", String(offset));
+  fd.append("length", String(length));
+  if (search) fd.append("search", search);
+  const res = await http.post("/api/tools/hex", fd, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  if (!res.data.success) throw new Error(res.data.error || "加载失败");
+  return res.data.data;
+}
+
+export function getExportUrl(format: "json" | "html") {
+  const base = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+  return base + "/api/tools/export/" + format;
+}
+
 export default http;
