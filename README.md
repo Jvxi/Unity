@@ -22,7 +22,7 @@
 
 前往 [Releases](https://github.com/Jvxi/Unity/releases) 下载最新版本的后端开源包。
 
-> 当前版本：**v0.2.0** · Release 仅提供后端开源包 ZIP；服务器部署用本地构建出的 JAR
+> 当前版本：**v0.2.0** · Release 提供后端开源包 ZIP 与 Windows 桌面安装包；服务器部署用本地构建出的 JAR
 
 ---
 
@@ -122,7 +122,7 @@ cd spring-server
 mvn clean package -DskipTests
 ```
 
-GitHub Releases 只上传一个后端开源包：`cat-tool-server-0.2.0.zip`。这个 ZIP 用于开源分享，包含后端源码和构建文件，不包含服务器运行用的 JAR。服务器部署的 JAR 需要在本地写好真实配置后单独构建并上传。
+GitHub Releases 上传后端开源包和前端桌面安装包：`cat-tool-server-0.2.0.zip` 用于开源分享，包含后端源码和构建文件，不包含服务器运行用的 JAR；`cat-tool-desktop-0.2.0-windows-x64-setup.exe` 和 `cat-tool-desktop-0.2.0-windows-x64.msi` 用于 Windows 桌面端安装。服务器部署的 JAR 需要在本地写好真实配置后单独构建并上传。
 
 ### Linux / 宝塔部署
 
