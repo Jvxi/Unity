@@ -1,20 +1,26 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import api from '@/api/client'
+import api, { resolveAssetUrl } from '@/api/client'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token') || '')
   const user = ref(JSON.parse(localStorage.getItem('user') || 'null'))
-
   const isLoggedIn = computed(() => !!token.value)
+
+  function persistUser(nextUser: any) {
+    if (nextUser?.avatarUrl) {
+      nextUser.avatarUrl = resolveAssetUrl(nextUser.avatarUrl)
+    }
+    user.value = nextUser
+    localStorage.setItem('user', JSON.stringify(user.value))
+  }
 
   async function login(loginStr: string, password: string) {
     const res = await api.post('/api/auth/login', { login: loginStr, password })
     if (res.data.success) {
       token.value = res.data.token
-      user.value = res.data.user
+      persistUser(res.data.user)
       localStorage.setItem('token', token.value)
-      localStorage.setItem('user', JSON.stringify(user.value))
     } else {
       throw new Error(res.data.error)
     }
@@ -24,9 +30,8 @@ export const useAuthStore = defineStore('auth', () => {
     const res = await api.post('/api/auth/register', { nickname, email, password, code })
     if (res.data.success) {
       token.value = res.data.token
-      user.value = res.data.user
+      persistUser(res.data.user)
       localStorage.setItem('token', token.value)
-      localStorage.setItem('user', JSON.stringify(user.value))
     } else {
       throw new Error(res.data.error)
     }
@@ -34,9 +39,38 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function sendCode(email: string, purpose: string) {
     const res = await api.post('/api/auth/send-code', { email, purpose })
-    if (!res.data.success) {
-      throw new Error(res.data.error)
+    if (!res.data.success) throw new Error(res.data.error)
+  }
+
+  async function fetchProfile() {
+    const res = await api.get('/api/user/profile')
+    if (res.data.success) {
+      persistUser({ ...user.value, ...res.data.data })
     }
+    return res.data.data
+  }
+
+  async function updateProfile(updates: Record<string, string>) {
+    const res = await api.put('/api/user/profile', updates)
+    if (res.data.success) await fetchProfile()
+    else throw new Error(res.data.error)
+  }
+
+  async function changePassword(oldPassword: string, newPassword: string) {
+    const res = await api.put('/api/user/password', { oldPassword, newPassword })
+    if (!res.data.success) throw new Error(res.data.error)
+  }
+
+  async function uploadAvatar(file: File) {
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await api.post('/api/user/avatar', fd)
+    if (res.data.success) {
+      const avatarUrl = resolveAssetUrl(res.data.avatarUrl)
+      persistUser({ ...user.value, avatarUrl })
+      return avatarUrl
+    }
+    throw new Error(res.data.error || '上传失败')
   }
 
   function logout() {
@@ -46,5 +80,5 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('user')
   }
 
-  return { token, user, isLoggedIn, login, register, sendCode, logout }
+  return { token, user, isLoggedIn, login, register, sendCode, fetchProfile, updateProfile, changePassword, uploadAvatar, logout }
 })

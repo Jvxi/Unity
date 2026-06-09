@@ -25,6 +25,7 @@
             <span v-show="!isCollapsed" class="menu-label">{{ item.label }}</span>
           </transition>
           <div v-if="currentRoute === item.path && !isCollapsed" class="active-dot"></div>
+          <el-badge v-if="item.path === '/chat' && chatStore.unreadTotal > 0" :value="chatStore.unreadTotal" :max="99" class="chat-badge" />
         </router-link>
       </nav>
 
@@ -38,13 +39,13 @@
     </el-aside>
 
     <el-container class="main-area">
-      <el-header class="header" ref="headerRef">
+      <el-header class="header">
         <h2 class="page-title">{{ pageTitle }}</h2>
         <div class="header-right">
           <template v-if="authStore.isLoggedIn">
             <el-dropdown>
               <span class="user-info">
-                <el-avatar :size="32" :src="catLogo" />
+                <el-avatar :size="32" :src="userAvatarSrc" />
                 <span class="username">{{ authStore.user?.nickname }}</span>
               </span>
               <template #dropdown>
@@ -73,21 +74,25 @@ import { computed, ref, onMounted, watch, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useSettingsStore } from "@/stores/settings";
 import { useAuthStore } from "@/stores/auth";
-import { animate, stagger } from "animejs";
+import { useChatStore } from "@/stores/chat";
+import { animate } from "animejs";
+import { panelIn, slideFlash, softPulse, staggerIn } from "@/utils/motion";
 import { ElMessage } from "element-plus";
 import catLogo from "@/assets/cat-logo.png";
+import { resolveAssetUrl } from "@/api/client";
 
 const route = useRoute();
 const router = useRouter();
 const store = useSettingsStore();
 const authStore = useAuthStore();
+const chatStore = useChatStore();
 
 const isCollapsed = computed(() => store.menuCollapsed);
 const currentRoute = computed(() => route.path);
+const userAvatarSrc = computed(() => resolveAssetUrl(authStore.user?.avatarUrl) || catLogo);
 
 const sidebarRef = ref<HTMLElement | null>(null);
 const logoRef = ref<HTMLElement | null>(null);
-const headerRef = ref<HTMLElement | null>(null);
 const glowRef = ref<HTMLElement | null>(null);
 
 const menuItems = [
@@ -96,6 +101,7 @@ const menuItems = [
   { path: "/strings", icon: "Document", label: "字符串提取" },
   { path: "/hex", icon: "Grid", label: "十六进制查看" },
   { path: "/history", icon: "Clock", label: "历史记录" },
+  { path: "/chat", icon: "ChatDotRound", label: "聊天" },
   { path: "/settings", icon: "Setting", label: "设置" },
 ];
 
@@ -108,12 +114,13 @@ const toggleCollapse = () => {
 const animateMenuItems = () => {
   const items = document.querySelectorAll('.menu-item');
   if (items.length > 0) {
-    animate(items, {
-      opacity: [{ from: 0.6 }, { to: 1 }],
-      translateX: isCollapsed.value ? [{ from: -8 }, { to: 0 }] : [{ from: 8 }, { to: 0 }],
-      duration: 350,
-      delay: stagger(40),
-      ease: 'outElastic(1, .85)',
+    staggerIn(items, {
+      x: isCollapsed.value ? -8 : 8,
+      y: 0,
+      scale: 1,
+      duration: 320,
+      staggerDelay: 34,
+      ease: 'out(3)',
     });
   }
 };
@@ -122,15 +129,16 @@ const animatePageEnter = () => {
   nextTick(() => {
     const cards = document.querySelectorAll('.main-content .el-card');
     if (cards.length > 0) {
-      animate(cards, {
-        opacity: [{ from: 0 }, { to: 1 }],
-        translateY: [{ from: 20 }, { to: 0 }],
-        scale: [{ from: 0.98 }, { to: 1 }],
+      staggerIn(cards, {
+        y: 20,
+        scale: 0.98,
         duration: 400,
-        delay: stagger(70, { start: 60 }),
-        ease: 'outElastic(1, .85)',
+        delay: 60,
+        staggerDelay: 70,
+        ease: 'out(3)',
       });
     }
+    panelIn(document.querySelector('.header'), { y: -6, duration: 240 });
   });
 };
 
@@ -147,6 +155,11 @@ const animateGlow = () => {
 };
 
 watch(() => route.path, animatePageEnter);
+watch(() => chatStore.unreadTotal, (count, oldCount) => {
+  if (count > oldCount) {
+    softPulse(document.querySelector('.chat-badge'), 1.12);
+  }
+});
 
 onMounted(() => {
   animateGlow();
@@ -168,12 +181,18 @@ const pageTitle = computed(() => {
     case "/strings": return "字符串提取";
     case "/hex": return "十六进制查看";
     case "/history": return "历史记录";
+    case "/chat": return "聊天";
     case "/settings": return "设置";
     default: return "猫爪工具";
   }
 });
 
+watch(pageTitle, () => {
+  nextTick(() => slideFlash(document.querySelector('.header .page-title'), -6));
+});
+
 const handleLogout = () => {
+  chatStore.disconnect();
   authStore.logout();
   ElMessage.success("已退出登录");
   router.push("/");
@@ -287,6 +306,11 @@ const handleLogout = () => {
   height: 6px;
   border-radius: 50%;
   background: var(--color-primary);
+}
+.chat-badge {
+  position: absolute;
+  right: 8px;
+  top: 4px;
 }
 
 .collapse-btn {

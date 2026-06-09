@@ -1,7 +1,13 @@
 import axios from "axios";
 import type { ApiResponse, AnalysisResult } from "@/types";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:38765";
+export const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:38765";
+
+export function resolveAssetUrl(url?: string | null) {
+  if (!url) return "";
+  if (/^(https?:|data:|blob:)/i.test(url)) return url;
+  return url.startsWith("/") ? `${API_BASE}${url}` : `${API_BASE}/${url}`;
+}
 
 const http = axios.create({
   baseURL: API_BASE,
@@ -36,7 +42,6 @@ export async function analyzeDll(
   if (model) formData.append("model", model);
 
   const res = await http.post<ApiResponse<AnalysisResult>>("/api/analyze", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
     onUploadProgress: (e) => {
       if (e.total && onProgress) {
         onProgress(Math.round((e.loaded / e.total) * 100));
@@ -71,9 +76,7 @@ export async function extractStrings(
   fd.append("minLength", String(minLength));
   fd.append("encoding", encoding);
   if (keyword) fd.append("keyword", keyword);
-  const res = await http.post("/api/tools/strings", fd, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  const res = await http.post("/api/tools/strings", fd);
   if (!res.data.success) throw new Error(res.data.error || "提取失败");
   return res.data.data;
 }
@@ -89,9 +92,7 @@ export async function hexDump(
   fd.append("offset", String(offset));
   fd.append("length", String(length));
   if (search) fd.append("search", search);
-  const res = await http.post("/api/tools/hex", fd, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  const res = await http.post("/api/tools/hex", fd);
   if (!res.data.success) throw new Error(res.data.error || "加载失败");
   return res.data.data;
 }

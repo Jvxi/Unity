@@ -60,24 +60,6 @@ async function handleUpload(file: File) {
 function doExport(format: "json" | "html") {
   if (!uploadedFile.value) return;
   const url = getExportUrl(format);
-  const form = document.createElement("form");
-  form.method = "POST";
-  form.action = url;
-  form.target = "_blank";
-  form.style.display = "none";
-
-  const addField = (name: string, value: string) => {
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = name;
-    input.value = value;
-    form.appendChild(input);
-  };
-
-  addField("file", ""); // 文件需要通过 FormData，此处用 download.js 方案
-  form.remove();
-
-  // 改用 fetch + blob 下载
   const fd = new FormData();
   fd.append("file", uploadedFile.value);
   if (store.apiKey) {
@@ -86,7 +68,12 @@ function doExport(format: "json" | "html") {
     fd.append("model", store.selectedModel);
   }
 
-  fetch(url, { method: "POST", body: fd })
+  const token = localStorage.getItem("token");
+  fetch(url, {
+    method: "POST",
+    body: fd,
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  })
     .then((res) => {
       if (!res.ok) throw new Error("导出失败");
       return res.blob();

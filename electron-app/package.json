@@ -1,6 +1,6 @@
 {
   "name": "cat-tool",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "猫爪工具 - 二进制分析助手",
   "scripts": {
     "dev": "vite",
@@ -10,21 +10,23 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",
+    "@stomp/stompjs": "^7.3.0",
+    "@tauri-apps/api": "^2",
     "animejs": "^4.4.1",
     "axios": "^1.6.8",
     "element-plus": "^2.6.3",
     "pinia": "^2.1.7",
+    "sockjs-client": "^1.6.1",
     "vue": "^3.4.21",
-    "vue-router": "^4.3.0",
-    "@tauri-apps/api": "^2"
+    "vue-router": "^4.3.0"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2",
     "@types/node": "^20.12.7",
     "@vitejs/plugin-vue": "^5.0.4",
     "typescript": "^5.4.5",
     "vite": "^5.2.8",
-    "vue-tsc": "^2.0.11",
-    "@tauri-apps/cli": "^2"
+    "vue-tsc": "^2.0.11"
   },
   "author": "Jvxi"
 }

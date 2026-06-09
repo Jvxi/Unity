@@ -1,5 +1,5 @@
-﻿server:
-  port: 8080
+server:
+  port: 38765
   tomcat:
     max-threads: 200
     min-spare-threads: 20
@@ -7,18 +7,22 @@
     connection-timeout: 10000
     max-connections: 8192
     protocol:
-      max-http-form-post-size: 10MB
+      max-http-form-post-size: 50MB
 
 spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
   jackson:
     serialization:
       indent-output: true
     deserialization:
       fail-on-missing-creator-properties: false
   datasource:
-    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME:cat_tool}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: ${DB_USER:root}
-    password: ${DB_PASS:root}
+    url: ${CAT_TOOL_DB_URL:jdbc:mysql://127.0.0.1:3306/cat_tool?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${CAT_TOOL_DB_USERNAME:cat_tool}
+    password: ${CAT_TOOL_DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 20
@@ -41,10 +45,10 @@ spring:
         order_updates: true
         generate_statistics: false
   mail:
-    host: smtp.126.com
-    port: 465
-    username: your-email@126.com
-    password: "your-smtp-auth-code"
+    host: ${CAT_TOOL_MAIL_HOST:smtp.example.com}
+    port: ${CAT_TOOL_MAIL_PORT:465}
+    username: ${CAT_TOOL_MAIL_USERNAME:}
+    password: ${CAT_TOOL_MAIL_PASSWORD:}
     protocol: smtp
     default-encoding: UTF-8
     properties:
@@ -61,19 +65,20 @@ spring:
           writetimeout: 10000
   data:
     redis:
-      host: ${REDIS_HOST:127.0.0.1}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
-      database: 0
+      host: ${CAT_TOOL_REDIS_HOST:127.0.0.1}
+      port: ${CAT_TOOL_REDIS_PORT:6379}
+      password: ${CAT_TOOL_REDIS_PASSWORD:}
+      database: ${CAT_TOOL_REDIS_DATABASE:0}
       timeout: 10000
 
 cat-tool:
+  upload-dir: ${CAT_TOOL_UPLOAD_DIR:uploads}
   auth:
-    token-ttl-hours: 168
-    jwt-secret: ${JWT_SECRET:LHSamRU/pbitWE93f1bhrOdDTWdHu+aXUkUH4z2bb14=}
+    token-ttl-hours: ${CAT_TOOL_TOKEN_TTL_HOURS:168}
+    jwt-secret: ${CAT_TOOL_JWT_SECRET:}
   mail:
-    from: your-email@126.com
-    from-name: "猫爪工具"
+    from: ${CAT_TOOL_MAIL_FROM:${CAT_TOOL_MAIL_USERNAME:no-reply@example.com}}
+    from-name: ${CAT_TOOL_MAIL_FROM_NAME:猫爪工具}
     code-ttl-minutes: 3
     cooldown-seconds: 60
   verification:

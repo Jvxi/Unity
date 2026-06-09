@@ -18,6 +18,7 @@ spring-server/.mvn/
 electron-app/node_modules/
 electron-app/dist/
 electron-app/dist-electron/
+electron-app/src-tauri/target/
 
 # Logs
 *.log
@@ -29,6 +30,12 @@ vite*.log
 *.dll
 
 # Env
+.env
+.env.*
+electron-app/.env
+electron-app/.env.*
+!*.example
+!electron-app/.env.example
 .env.local
 .env.*.local
 
@@ -38,6 +45,13 @@ vite*.log
 *.swp
 # Electron build
 release/
+artifacts/
+dist-release/
+*.zip
+*.msi
+*.exe
 
 # Protect credentials
-spring-server/src/main/resources/application.yml
+spring-server/src/main/resources/application-local.yml
+spring-server/src/main/resources/application-*.local.yml
+spring-server/uploads/

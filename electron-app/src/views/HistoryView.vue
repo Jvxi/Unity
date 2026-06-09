@@ -61,8 +61,7 @@ const pageSize = 20
 const loadRecords = async (page = 1) => {
   loading.value = true
   try {
-    const res = await api.get('/records/list', {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+    const res = await api.get('/api/records/list', {
       params: { page: page - 1, size: pageSize }
     })
     if (res.data.success) {
@@ -83,9 +82,7 @@ const viewDetail = (id: number) => {
 const handleDelete = async (id: number) => {
   await ElMessageBox.confirm('确定删除该记录？', '提示', { type: 'warning' })
   try {
-    await api.delete(`/records/${id}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` }
-    })
+    await api.delete(`/api/records/${id}`)
     ElMessage.success('删除成功')
     loadRecords(currentPage.value)
   } catch (error: any) {

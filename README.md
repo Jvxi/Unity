@@ -22,7 +22,7 @@
 
 前往 [Releases](https://github.com/Jvxi/Unity/releases) 下载最新版本的 Windows 安装包。
 
-> 当前版本：**v0.1.0** · 安装包约 2 MB · 支持 Windows x64
+> 当前版本：**v0.2.0** · 支持 Windows x64 · 提供安装包与 ZIP 绿色包
 
 ---
 
@@ -43,12 +43,18 @@
 - **JWT 认证** — 无状态会话，Spring Security + JWT Token
 - **路由守卫** — 未登录自动跳转登录页
 - **历史记录** — 分析历史自动保存和查看
+- **个人设置** — 头像上传、资料编辑、密码修改、主题和侧边栏设置
+
+### 即时聊天
+- **私聊 / 群聊** — 支持会话列表、未读数、群成员管理
+- **文件与图片消息** — 上传后通过静态资源地址访问
+- **消息搜索与撤回** — 支持当前会话检索和 2 分钟内撤回
 
 ### 桌面客户端
-- **Tauri 2** 轻量桌面应用（安装包约 2 MB）
+- **Tauri 2** 轻量桌面应用
 - 分栏式登录/注册页面，磨砂玻璃效果
 - 可折叠侧边栏导航
-- NSIS 安装包分发
+- NSIS / MSI 安装包和 ZIP 绿色包分发
 
 ---
 
@@ -67,6 +73,16 @@
 
 ### 启动后端
 
+复制或编写本地私有配置，生产环境建议使用环境变量注入敏感项：
+
+```bash
+cd spring-server
+# Windows PowerShell 示例
+$env:CAT_TOOL_DB_PASSWORD="your-db-password"
+$env:CAT_TOOL_MAIL_PASSWORD="your-mail-auth-code"
+$env:CAT_TOOL_JWT_SECRET="base64-encoded-256-bit-secret"
+```
+
 ```bash
 cd spring-server
 mvn spring-boot:run
@@ -79,6 +95,7 @@ mvn spring-boot:run
 ```bash
 cd electron-app
 npm install
+cp .env.example .env
 npm run dev
 ```
 
@@ -90,6 +107,23 @@ npm run dev
 cd electron-app
 npm run tauri build
 ```
+
+### 发布打包
+
+```bash
+# 后端 Jar
+cd spring-server
+mvn clean package -DskipTests
+
+# 前端静态资源
+cd ../electron-app
+npm run build
+
+# 桌面安装包
+npm run tauri build
+```
+
+发布产物会整理到 `artifacts/v0.2.0/`，包括后端 Jar、前端 ZIP、桌面安装包和桌面 ZIP。
 
 ---
 
@@ -114,11 +148,14 @@ npm run tauri build
 | `POST` | `/api/analyze` | 上传 DLL 文件进行分析 |
 | `POST` | `/api/tools/strings` | 字符串提取 |
 | `POST` | `/api/tools/hex` | 十六进制查看 |
-| `GET` | `/api/tools/export/json` | 导出 JSON 报告 |
-| `GET` | `/api/tools/export/html` | 导出 HTML 报告 |
+| `POST` | `/api/tools/export/json` | 导出 JSON 报告 |
+| `POST` | `/api/tools/export/html` | 导出 HTML 报告 |
 | `POST` | `/api/auth/login` | 用户登录 |
 | `POST` | `/api/auth/register` | 用户注册 |
 | `POST` | `/api/auth/send-code` | 发送邮箱验证码 |
+| `POST` | `/api/user/avatar` | 上传头像 |
+| `GET` | `/api/chat/sessions` | 聊天会话 |
+| `POST` | `/api/chat/upload` | 聊天文件上传 |
 
 ---
 
@@ -128,6 +165,7 @@ npm run tauri build
 Unity/
 ├── spring-server/                    # Spring Boot 后端
 │   ├── pom.xml
+│   ├── src/main/resources/application.yml # 安全默认配置，敏感项读取环境变量
 │   └── src/main/java/com/jvxi/unity/
 │       ├── controller/               # REST API
 │       ├── service/
@@ -164,6 +202,22 @@ Unity/
 | 桌面 | Tauri 2 / Rust |
 | 数据库 | MySQL 8 / Redis |
 | AI | DeepSeek / 小米 MiMo |
+
+---
+
+## 配置安全
+
+以下文件不会推送到仓库：`.env`、`electron-app/.env.*`、`spring-server/src/main/resources/application-local.yml`、日志、上传文件和打包产物。
+
+后端敏感配置通过环境变量读取：
+
+| 环境变量 | 说明 |
+|----------|------|
+| `CAT_TOOL_DB_URL` | MySQL 连接地址 |
+| `CAT_TOOL_DB_USERNAME` / `CAT_TOOL_DB_PASSWORD` | 数据库账号密码 |
+| `CAT_TOOL_MAIL_USERNAME` / `CAT_TOOL_MAIL_PASSWORD` | SMTP 账号和授权码 |
+| `CAT_TOOL_JWT_SECRET` | JWT Base64 密钥 |
+| `CAT_TOOL_UPLOAD_DIR` | 上传文件目录 |
 
 ---
 

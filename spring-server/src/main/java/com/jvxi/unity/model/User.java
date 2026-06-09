@@ -23,6 +23,21 @@ public class User {
     @Column(length = 255)
     private String avatarUrl;
 
+    @Column(length = 500)
+    private String bio;
+
+    @Column(length = 10)
+    private String gender;
+
+    @Column(length = 20)
+    private String birthday;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private OnlineStatus onlineStatus = OnlineStatus.OFFLINE;
+
+    private LocalDateTime lastActiveAt;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -33,6 +48,7 @@ public class User {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        lastActiveAt = LocalDateTime.now();
     }
 
     @PreUpdate
@@ -56,7 +72,21 @@ public class User {
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
+    public String getBio() { return bio; }
+    public void setBio(String bio) { this.bio = bio; }
 
+    public String getGender() { return gender; }
+    public void setGender(String gender) { this.gender = gender; }
+
+    public String getBirthday() { return birthday; }
+    public void setBirthday(String birthday) { this.birthday = birthday; }
+
+    public OnlineStatus getOnlineStatus() { return onlineStatus; }
+    public void setOnlineStatus(OnlineStatus onlineStatus) { this.onlineStatus = onlineStatus; }
+
+    public LocalDateTime getLastActiveAt() { return lastActiveAt; }
+    public void setLastActiveAt(LocalDateTime lastActiveAt) { this.lastActiveAt = lastActiveAt; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 }

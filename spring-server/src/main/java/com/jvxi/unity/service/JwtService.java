@@ -115,6 +115,9 @@ public class JwtService {
      * 获取签名密钥
      */
     private SecretKey getSigningKey() {
+        if (secretKey == null || secretKey.isBlank()) {
+            throw new IllegalStateException("CAT_TOOL_JWT_SECRET 未配置");
+        }
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
     }

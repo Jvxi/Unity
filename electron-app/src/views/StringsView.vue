@@ -131,9 +131,7 @@ async function doExtract() {
     fd.append("minLength", String(minLength.value));
     fd.append("encoding", encoding.value);
     if (keyword.value) fd.append("keyword", keyword.value);
-    const res = await http.post("/api/tools/strings", fd, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const res = await http.post("/api/tools/strings", fd);
     if (res.data.success) {
       result.value = res.data.data;
       currentPage.value = 1;

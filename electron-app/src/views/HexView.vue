@@ -121,9 +121,7 @@ async function doDump() {
     fd.append("offset", String(offset.value || 0));
     fd.append("length", String(length.value || 0));
     if (searchHex.value) fd.append("search", searchHex.value);
-    const res = await http.post("/api/tools/hex", fd, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const res = await http.post("/api/tools/hex", fd);
     if (res.data.success) {
       hexResult.value = res.data.data;
       ElMessage.success(`加载完成，${res.data.data.totalLines} 行`);
