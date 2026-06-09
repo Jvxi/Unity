@@ -20,9 +20,9 @@
 
 ## 下载安装
 
-前往 [Releases](https://github.com/Jvxi/Unity/releases) 下载最新版本的 Windows 安装包。
+前往 [Releases](https://github.com/Jvxi/Unity/releases) 下载最新版本的后端开源包。
 
-> 当前版本：**v0.2.0** · 支持 Windows x64 · 提供安装包与 ZIP 绿色包
+> 当前版本：**v0.2.0** · Release 仅提供后端开源包 ZIP；服务器部署用本地构建出的 JAR
 
 ---
 
@@ -54,7 +54,7 @@
 - **Tauri 2** 轻量桌面应用
 - 分栏式登录/注册页面，磨砂玻璃效果
 - 可折叠侧边栏导航
-- NSIS / MSI 安装包和 ZIP 绿色包分发
+- 可按需在本地构建桌面安装包
 
 ---
 
@@ -73,14 +73,21 @@
 
 ### 启动后端
 
-复制或编写本地私有配置，生产环境建议使用环境变量注入敏感项：
+后端使用 JAR 内部的 `application.yml`。仓库中的配置只能保留安全模板值，真实数据库密码、邮箱授权码和 JWT 密钥不要提交到 GitHub。
 
-```bash
-cd spring-server
-# Windows PowerShell 示例
-$env:CAT_TOOL_DB_PASSWORD="your-db-password"
-$env:CAT_TOOL_MAIL_PASSWORD="your-mail-auth-code"
-$env:CAT_TOOL_JWT_SECRET="base64-encoded-256-bit-secret"
+本地开发或准备服务器 JAR 前，在 `spring-server/src/main/resources/application.yml` 中写入实际配置后再打包：
+
+```yaml
+spring:
+  datasource:
+    username: your-db-user
+    password: your-db-password
+  mail:
+    username: your-mail@example.com
+    password: your-mail-auth-code
+cat-tool:
+  auth:
+    jwt-secret: your-base64-256-bit-secret
 ```
 
 ```bash
@@ -111,19 +118,24 @@ npm run tauri build
 ### 发布打包
 
 ```bash
-# 后端 Jar
 cd spring-server
 mvn clean package -DskipTests
-
-# 前端静态资源
-cd ../electron-app
-npm run build
-
-# 桌面安装包
-npm run tauri build
 ```
 
-发布产物会整理到 `artifacts/v0.2.0/`，包括后端 Jar、前端 ZIP、桌面安装包和桌面 ZIP。
+GitHub Releases 只上传一个后端开源包：`cat-tool-server-0.2.0.zip`。这个 ZIP 用于开源分享，包含后端源码和构建文件，不包含服务器运行用的 JAR。服务器部署的 JAR 需要在本地写好真实配置后单独构建并上传。
+
+### Linux / 宝塔部署
+
+1. 在本地确认 `spring-server/src/main/resources/application.yml` 已写入服务器要使用的真实配置。
+2. 执行 `mvn clean package -DskipTests` 生成服务器运行用的 JAR。
+3. 将 `spring-server/target/cat-tool-0.2.0.jar` 上传到宝塔站点目录，例如 `/www/wwwroot/cat-tool/`。
+4. 在宝塔 Java 项目或进程守护中运行：
+
+```bash
+java -jar /www/wwwroot/cat-tool/cat-tool-0.2.0.jar
+```
+
+默认端口：`38765`。如需 Nginx 反向代理，将站点代理到 `http://127.0.0.1:38765`。
 
 ---
 
@@ -165,7 +177,7 @@ npm run tauri build
 Unity/
 ├── spring-server/                    # Spring Boot 后端
 │   ├── pom.xml
-│   ├── src/main/resources/application.yml # 安全默认配置，敏感项读取环境变量
+│   ├── src/main/resources/application.yml # JAR 内部配置模板，提交前不要写入真实密钥
 │   └── src/main/java/com/jvxi/unity/
 │       ├── controller/               # REST API
 │       ├── service/
@@ -209,15 +221,7 @@ Unity/
 
 以下文件不会推送到仓库：`.env`、`electron-app/.env.*`、`spring-server/src/main/resources/application-local.yml`、日志、上传文件和打包产物。
 
-后端敏感配置通过环境变量读取：
-
-| 环境变量 | 说明 |
-|----------|------|
-| `CAT_TOOL_DB_URL` | MySQL 连接地址 |
-| `CAT_TOOL_DB_USERNAME` / `CAT_TOOL_DB_PASSWORD` | 数据库账号密码 |
-| `CAT_TOOL_MAIL_USERNAME` / `CAT_TOOL_MAIL_PASSWORD` | SMTP 账号和授权码 |
-| `CAT_TOOL_JWT_SECRET` | JWT Base64 密钥 |
-| `CAT_TOOL_UPLOAD_DIR` | 上传文件目录 |
+后端使用 JAR 内部的 `spring-server/src/main/resources/application.yml`。仓库中的该文件只能提交安全模板值；需要部署到服务器时，在本地写入真实数据库、邮箱和 JWT 配置后重新打包 JAR，再上传给服务器使用。真实配置不要提交。
 
 ---
 

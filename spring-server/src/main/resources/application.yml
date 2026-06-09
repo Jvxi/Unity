@@ -20,9 +20,9 @@ spring:
     deserialization:
       fail-on-missing-creator-properties: false
   datasource:
-    url: ${CAT_TOOL_DB_URL:jdbc:mysql://127.0.0.1:3306/cat_tool?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
-    username: ${CAT_TOOL_DB_USERNAME:cat_tool}
-    password: ${CAT_TOOL_DB_PASSWORD:}
+    url: jdbc:mysql://127.0.0.1:3306/cat_tool?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: cat_tool
+    password:
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 20
@@ -45,10 +45,10 @@ spring:
         order_updates: true
         generate_statistics: false
   mail:
-    host: ${CAT_TOOL_MAIL_HOST:smtp.example.com}
-    port: ${CAT_TOOL_MAIL_PORT:465}
-    username: ${CAT_TOOL_MAIL_USERNAME:}
-    password: ${CAT_TOOL_MAIL_PASSWORD:}
+    host: smtp.example.com
+    port: 465
+    username:
+    password:
     protocol: smtp
     default-encoding: UTF-8
     properties:
@@ -65,20 +65,20 @@ spring:
           writetimeout: 10000
   data:
     redis:
-      host: ${CAT_TOOL_REDIS_HOST:127.0.0.1}
-      port: ${CAT_TOOL_REDIS_PORT:6379}
-      password: ${CAT_TOOL_REDIS_PASSWORD:}
-      database: ${CAT_TOOL_REDIS_DATABASE:0}
+      host: 127.0.0.1
+      port: 6379
+      password:
+      database: 0
       timeout: 10000
 
 cat-tool:
-  upload-dir: ${CAT_TOOL_UPLOAD_DIR:uploads}
+  upload-dir: uploads
   auth:
-    token-ttl-hours: ${CAT_TOOL_TOKEN_TTL_HOURS:168}
-    jwt-secret: ${CAT_TOOL_JWT_SECRET:}
+    token-ttl-hours: 168
+    jwt-secret:
   mail:
-    from: ${CAT_TOOL_MAIL_FROM:${CAT_TOOL_MAIL_USERNAME:no-reply@example.com}}
-    from-name: ${CAT_TOOL_MAIL_FROM_NAME:猫爪工具}
+    from: no-reply@example.com
+    from-name: 猫爪工具
     code-ttl-minutes: 3
     cooldown-seconds: 60
   verification:
