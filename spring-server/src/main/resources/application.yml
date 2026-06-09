@@ -6,14 +6,13 @@ server:
     accept-count: 100
     connection-timeout: 10000
     max-connections: 8192
-    protocol:
-      max-http-form-post-size: 50MB
-
+    max-http-form-post-size: 200MB
+    max-swallow-size: 200MB
 spring:
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
+      max-file-size: 200MB
+      max-request-size: 200MB
   jackson:
     serialization:
       indent-output: true
