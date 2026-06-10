@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import api, { resolveAssetUrl } from '@/api/client'
+import axios from 'axios'
+import api, { normalizeAssetPath, resolveAssetUrl } from '@/api/client'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token') || '')
@@ -9,7 +10,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   function persistUser(nextUser: any) {
     if (nextUser?.avatarUrl) {
-      nextUser.avatarUrl = resolveAssetUrl(nextUser.avatarUrl)
+      nextUser.avatarUrl = normalizeAssetPath(nextUser.avatarUrl)
     }
     user.value = nextUser
     localStorage.setItem('user', JSON.stringify(user.value))
@@ -64,13 +65,21 @@ export const useAuthStore = defineStore('auth', () => {
   async function uploadAvatar(file: File) {
     const fd = new FormData()
     fd.append('file', file)
-    const res = await api.post('/api/user/avatar', fd)
-    if (res.data.success) {
-      const avatarUrl = resolveAssetUrl(res.data.avatarUrl)
-      persistUser({ ...user.value, avatarUrl })
-      return avatarUrl
+    try {
+      const res = await api.post('/api/user/avatar', fd)
+      if (res.data.success) {
+        const avatarUrl = normalizeAssetPath(res.data.avatarUrl)
+        persistUser({ ...user.value, avatarUrl })
+        return resolveAssetUrl(avatarUrl)
+      }
+      throw new Error(res.data.error || '上传失败')
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const data = error.response?.data as { error?: string; message?: string } | undefined
+        throw new Error(data?.error || data?.message || error.message || '上传失败')
+      }
+      throw error
     }
-    throw new Error(res.data.error || '上传失败')
   }
 
   function logout() {

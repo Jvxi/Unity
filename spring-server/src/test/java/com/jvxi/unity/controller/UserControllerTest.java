@@ -74,14 +74,14 @@ class UserControllerTest {
                 "file",
                 "avatar.png",
                 "image/png",
-                new byte[(2 * 1024 * 1024) + 1]
+                new byte[(10 * 1024 * 1024) + 1]
         );
 
         ResponseEntity<Map<String, Object>> response = controller.uploadAvatar(authFor(42L), file);
 
         assertEquals(400, response.getStatusCode().value());
         assertEquals(false, response.getBody().get("success"));
-        assertEquals("头像不能超过 2MB", response.getBody().get("error"));
+        assertEquals("头像不能超过 10MB", response.getBody().get("error"));
     }
 
     private UserController controllerWith(UserService userService) {

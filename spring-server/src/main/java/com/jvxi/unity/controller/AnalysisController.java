@@ -35,12 +35,32 @@ public class AnalysisController {
         return Map.of("providers", deepSeekService.getProvidersSummary());
     }
 
+    @PostMapping("/ai/test")
+    public ResponseEntity<Map<String, Object>> testAiConnection(@RequestBody Map<String, String> request) {
+        String result = deepSeekService.testConnection(
+            request.get("apiKey"),
+            request.getOrDefault("provider", "deepseek"),
+            request.get("model"),
+            request.get("apiUrl")
+        );
+        boolean success = result != null
+            && !result.startsWith("AI ")
+            && !result.startsWith("未知")
+            && !result.startsWith("API Key")
+            && !result.startsWith("不支持");
+        if (success) {
+            return ResponseEntity.ok(Map.of("success", true, "message", result));
+        }
+        return ResponseEntity.badRequest().body(Map.of("success", false, "error", result));
+    }
+
     @PostMapping("/analyze")
     public ResponseEntity<Map<String, Object>> analyze(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "apiKey", required = false) String apiKey,
             @RequestParam(value = "provider", required = false, defaultValue = "deepseek") String provider,
-            @RequestParam(value = "model", required = false) String model) {
+            @RequestParam(value = "model", required = false) String model,
+            @RequestParam(value = "apiUrl", required = false) String apiUrl) {
 
         try {
             byte[] data = file.getBytes();
@@ -55,7 +75,7 @@ public class AnalysisController {
             // 3. AI 分析（可选）
             String aiSummary = null;
             if (apiKey != null && !apiKey.isBlank()) {
-                aiSummary = deepSeekService.analyzeWithAI(peInfo, vtables, apiKey, provider, model);
+                aiSummary = deepSeekService.analyzeWithAI(peInfo, vtables, apiKey, provider, model, apiUrl);
             }
 
             // 4. 组装结果

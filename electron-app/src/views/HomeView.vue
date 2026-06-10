@@ -35,7 +35,7 @@ import { animate, stagger } from "animejs";
 const features = [
   { icon: "Document", color: "#22c55e", bg: "rgba(34,197,94,0.1)", title: "PE 全面解析", desc: "解析 PE 头、段表、导出导入表、调试信息、TLS 等全部结构" },
   { icon: "Search", color: "#f59e0b", bg: "rgba(245,158,11,0.1)", title: "多策略虚表检测", desc: "RTTI 引导、连续指针扫描、导出交叉引用三种策略互补" },
-  { icon: "MagicStick", color: "#6b7280", bg: "rgba(107,114,128,0.1)", title: "AI 智能分析", desc: "DeepSeek / 小米 MiMo 大模型辅助确认虚表、排除误报" },
+  { icon: "MagicStick", color: "#6b7280", bg: "rgba(107,114,128,0.1)", title: "AI 智能分析", desc: "多厂商大模型辅助确认虚表、排除误报" },
 ];
 
 onMounted(() => {

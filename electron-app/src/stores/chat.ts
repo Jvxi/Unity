@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client/dist/sockjs'
-import api, { API_BASE } from '@/api/client'
+import api, { getApiBaseUrl } from '@/api/client'
 import type { ChatMessage, ChatSession, ChatGroup, ChatGroupMember } from '@/types'
 
 export const useChatStore = defineStore('chat', () => {
@@ -20,7 +20,7 @@ export const useChatStore = defineStore('chat', () => {
   function connect(token: string) {
     if (stompClient?.active) return
     stompClient = new Client({
-      webSocketFactory: () => new SockJS(API_BASE + '/ws'),
+      webSocketFactory: () => new SockJS(getApiBaseUrl() + '/ws'),
       connectHeaders: { Authorization: 'Bearer ' + token },
       reconnectDelay: 5000,
       heartbeatIncoming: 10000,

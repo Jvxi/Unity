@@ -45,7 +45,7 @@ async function handleUpload(file: File) {
   result.value = null;
   uploadedFile.value = file;
   try {
-    result.value = await analyzeDll(file, store.apiKey, store.selectedProvider, store.selectedModel, (p) => {
+    result.value = await analyzeDll(file, store.apiKey, store.selectedProvider, store.selectedModel, store.aiApiUrl, (p) => {
       uploadPercent.value = p;
     });
     ElMessage.success("分析完成");
@@ -66,6 +66,7 @@ function doExport(format: "json" | "html") {
     fd.append("apiKey", store.apiKey);
     fd.append("provider", store.selectedProvider);
     fd.append("model", store.selectedModel);
+    if (store.aiApiUrl) fd.append("apiUrl", store.aiApiUrl);
   }
 
   const token = localStorage.getItem("token");

@@ -2,6 +2,8 @@ package com.jvxi.unity.controller;
 
 import com.jvxi.unity.model.User;
 import com.jvxi.unity.service.UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +20,9 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/user")
 public class UserController {
+    private static final Logger log = LoggerFactory.getLogger(UserController.class);
+    private static final long AVATAR_MAX_SIZE = 10L * 1024 * 1024;
+    private static final String AVATAR_MAX_SIZE_LABEL = "10MB";
 
     @Autowired
     private UserService userService;
@@ -77,8 +82,8 @@ public class UserController {
             if (contentType == null || !contentType.startsWith("image/")) {
                 return ResponseEntity.badRequest().body(Map.of("success", false, "error", "仅支持上传图片头像"));
             }
-            if (file.getSize() > 2 * 1024 * 1024) {
-                return ResponseEntity.badRequest().body(Map.of("success", false, "error", "头像不能超过 2MB"));
+            if (file.getSize() > AVATAR_MAX_SIZE) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "error", "头像不能超过 " + AVATAR_MAX_SIZE_LABEL));
             }
 
             String originalName = file.getOriginalFilename();
@@ -86,8 +91,12 @@ public class UserController {
                 originalName.substring(originalName.lastIndexOf(".")) : ".png";
             String fileName = "avatar_" + userId + "_" + System.currentTimeMillis() + ext;
 
-            Path uploadDir = Paths.get(uploadRoot, "avatars");
+            Path uploadDir = Paths.get(uploadRoot, "avatars").toAbsolutePath().normalize();
             Files.createDirectories(uploadDir);
+            if (!Files.isWritable(uploadDir)) {
+                log.warn("Avatar upload directory is not writable: {}", uploadDir);
+                return ResponseEntity.badRequest().body(Map.of("success", false, "error", "头像上传目录不可写，请检查服务器目录权限"));
+            }
             Path filePath = uploadDir.resolve(fileName);
             file.transferTo(filePath.toFile());
 
@@ -96,7 +105,8 @@ public class UserController {
 
             return ResponseEntity.ok(Map.of("success", true, "avatarUrl", avatarUrl));
         } catch (IOException e) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "error", "上传失败"));
+            log.warn("Avatar upload failed, uploadRoot={}", uploadRoot, e);
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", "头像保存失败，请检查服务器上传目录权限"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
         }

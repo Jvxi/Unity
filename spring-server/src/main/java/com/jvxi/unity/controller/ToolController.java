@@ -82,14 +82,15 @@ public class ToolController {
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "apiKey", required = false) String apiKey,
             @RequestParam(value = "provider", required = false, defaultValue = "deepseek") String provider,
-            @RequestParam(value = "model", required = false) String model) {
+            @RequestParam(value = "model", required = false) String model,
+            @RequestParam(value = "apiUrl", required = false) String apiUrl) {
         try {
             byte[] data = file.getBytes();
             PeInfo peInfo = peParser.parse(data, file.getOriginalFilename());
             List<VtableInfo> vtables = vtableDetector.detect(data, peInfo);
             String aiSummary = null;
             if (apiKey != null && !apiKey.isBlank()) {
-                aiSummary = deepSeekService.analyzeWithAI(peInfo, vtables, apiKey, provider, model);
+                aiSummary = deepSeekService.analyzeWithAI(peInfo, vtables, apiKey, provider, model, apiUrl);
             }
             String json = reportService.exportJson(peInfo, vtables, aiSummary);
             return ResponseEntity.ok()
@@ -106,14 +107,15 @@ public class ToolController {
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "apiKey", required = false) String apiKey,
             @RequestParam(value = "provider", required = false, defaultValue = "deepseek") String provider,
-            @RequestParam(value = "model", required = false) String model) {
+            @RequestParam(value = "model", required = false) String model,
+            @RequestParam(value = "apiUrl", required = false) String apiUrl) {
         try {
             byte[] data = file.getBytes();
             PeInfo peInfo = peParser.parse(data, file.getOriginalFilename());
             List<VtableInfo> vtables = vtableDetector.detect(data, peInfo);
             String aiSummary = null;
             if (apiKey != null && !apiKey.isBlank()) {
-                aiSummary = deepSeekService.analyzeWithAI(peInfo, vtables, apiKey, provider, model);
+                aiSummary = deepSeekService.analyzeWithAI(peInfo, vtables, apiKey, provider, model, apiUrl);
             }
             String html = reportService.exportHtml(peInfo, vtables, aiSummary);
             return ResponseEntity.ok()

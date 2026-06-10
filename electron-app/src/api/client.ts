@@ -1,21 +1,58 @@
 import axios from "axios";
-import type { ApiResponse, AnalysisResult } from "@/types";
+import type { ApiResponse, AnalysisResult, ProviderInfo } from "@/types";
 
-export const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:38765";
+const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:38765";
+
+export function normalizeApiBaseUrl(value?: string | null) {
+  let next = (value || "").trim();
+  if (!next) next = DEFAULT_API_BASE;
+  if (!/^https?:\/\//i.test(next)) next = `http://${next}`;
+
+  try {
+    const url = new URL(next);
+    return url.href.replace(/\/+$/, "");
+  } catch {
+    throw new Error("服务器地址格式不正确");
+  }
+}
+
+export const API_BASE = normalizeApiBaseUrl(DEFAULT_API_BASE);
+
+export function getApiBaseUrl() {
+  return API_BASE;
+}
+
+export function normalizeAssetPath(url?: string | null) {
+  if (!url) return "";
+  if (/^(data:|blob:)/i.test(url)) return url;
+  if (!/^https?:\/\//i.test(url)) return url;
+
+  try {
+    const parsed = new URL(url);
+    if (parsed.pathname.startsWith("/uploads/")) {
+      return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    }
+  } catch {}
+
+  return url;
+}
 
 export function resolveAssetUrl(url?: string | null) {
   if (!url) return "";
   if (/^(https?:|data:|blob:)/i.test(url)) return url;
-  return url.startsWith("/") ? `${API_BASE}${url}` : `${API_BASE}/${url}`;
+
+  const base = getApiBaseUrl();
+  return url.startsWith("/") ? `${base}${url}` : `${base}/${url}`;
 }
 
 const http = axios.create({
-  baseURL: API_BASE,
+  baseURL: getApiBaseUrl(),
   timeout: 120000,
 });
 
 // 请求拦截器 - 添加Token
 http.interceptors.request.use((config) => {
+  config.baseURL = getApiBaseUrl();
   const token = localStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -23,9 +60,19 @@ http.interceptors.request.use((config) => {
   return config;
 });
 
-export async function getProviders() {
+http.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (axios.isAxiosError(error) && !error.response) {
+      error.message = `无法连接服务器：${getApiBaseUrl()}`;
+    }
+    return Promise.reject(error);
+  }
+);
+
+export async function getProviders(): Promise<ProviderInfo[]> {
   const res = await http.get("/api/providers");
-  return res.data.providers;
+  return Array.isArray(res.data?.providers) ? res.data.providers : [];
 }
 
 export async function analyzeDll(
@@ -33,6 +80,7 @@ export async function analyzeDll(
   apiKey: string,
   provider: string,
   model: string,
+  apiUrl?: string,
   onProgress?: (percent: number) => void
 ): Promise<AnalysisResult> {
   const formData = new FormData();
@@ -40,6 +88,7 @@ export async function analyzeDll(
   if (apiKey) formData.append("apiKey", apiKey);
   if (provider) formData.append("provider", provider);
   if (model) formData.append("model", model);
+  if (apiUrl) formData.append("apiUrl", apiUrl);
 
   const res = await http.post<ApiResponse<AnalysisResult>>("/api/analyze", formData, {
     onUploadProgress: (e) => {
@@ -53,6 +102,25 @@ export async function analyzeDll(
     throw new Error(res.data.error || "分析失败");
   }
   return res.data.data!;
+}
+
+export async function testAiConnection(
+  apiKey: string,
+  provider: string,
+  model: string,
+  apiUrl?: string
+) {
+  try {
+    const res = await http.post("/api/ai/test", { apiKey, provider, model, apiUrl });
+    if (!res.data.success) throw new Error(res.data.error || "AI 接口连接失败");
+    return res.data.message || "OK";
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const data = error.response?.data as { error?: string; message?: string } | undefined;
+      throw new Error(data?.error || data?.message || error.message || "AI 接口连接失败");
+    }
+    throw error;
+  }
 }
 
 export async function healthCheck(): Promise<boolean> {
@@ -98,8 +166,7 @@ export async function hexDump(
 }
 
 export function getExportUrl(format: "json" | "html") {
-  const base = import.meta.env.VITE_API_BASE_URL || "http://localhost:38765";
-  return base + "/api/tools/export/" + format;
+  return getApiBaseUrl() + "/api/tools/export/" + format;
 }
 
 export default http;

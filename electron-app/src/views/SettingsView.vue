@@ -133,7 +133,7 @@
             </el-select>
           </el-form-item>
           <el-form-item label="模型">
-            <el-select v-model="model" style="width: 100%">
+            <el-select v-model="model" style="width: 100%" filterable allow-create default-first-option>
               <el-option
                 v-for="m in currentModels"
                 :key="m.id"
@@ -141,6 +141,9 @@
                 :value="m.id"
               />
             </el-select>
+          </el-form-item>
+          <el-form-item label="API URL">
+            <el-input v-model="apiUrl" placeholder="https://api.example.com/v1/chat/completions" clearable />
           </el-form-item>
           <el-form-item label="API Key">
             <el-input v-model="apiKey" :type="showKey ? 'text' : 'password'" placeholder="输入 API Key">
@@ -153,7 +156,7 @@
           </el-form-item>
           <el-form-item class="form-actions">
             <el-button type="primary" class="ai-save-btn" @click="saveAi" round>保存设置</el-button>
-            <el-button class="ai-test-btn" :loading="testingConnection" @click="testConnection" round>
+            <el-button class="ai-test-btn" :loading="testingConnection" @click="testAiEndpoint" round>
               测试连接
             </el-button>
           </el-form-item>
@@ -166,7 +169,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, nextTick } from "vue";
 import { ElMessage } from "element-plus";
-import { getProviders, healthCheck, resolveAssetUrl } from "@/api/client";
+import { getProviders, healthCheck, resolveAssetUrl, testAiConnection } from "@/api/client";
 import { useSettingsStore } from "@/stores/settings";
 import { useAuthStore } from "@/stores/auth";
 import { panelIn, softPulse, staggerIn } from "@/utils/motion";
@@ -192,6 +195,8 @@ const avatarUploading = ref(false);
 const profileSaving = ref(false);
 const passwordSaving = ref(false);
 const testingConnection = ref(false);
+const AVATAR_MAX_SIZE = 10 * 1024 * 1024;
+const AVATAR_MAX_SIZE_LABEL = "10MB";
 
 const avatarSrc = computed(() => resolveAssetUrl(profile.avatarUrl));
 const avatarInitial = computed(() => (profile.nickname || "?").slice(0, 1));
@@ -217,8 +222,8 @@ async function handleAvatarUpload(file: File) {
     ElMessage.warning("请选择图片文件");
     return false;
   }
-  if (file.size > 2 * 1024 * 1024) {
-    ElMessage.warning("头像不能超过 2MB");
+  if (file.size > AVATAR_MAX_SIZE) {
+    ElMessage.warning(`头像不能超过 ${AVATAR_MAX_SIZE_LABEL}`);
     return false;
   }
   avatarUploading.value = true;
@@ -314,21 +319,214 @@ function onMenuCollapseChange(value: string | number | boolean) {
 const apiKey = ref(settingsStore.apiKey);
 const provider = ref(settingsStore.selectedProvider);
 const model = ref(settingsStore.selectedModel);
+const apiUrl = ref(settingsStore.aiApiUrl);
 const showKey = ref(false);
-const providers = ref<ProviderInfo[]>([]);
+const DEFAULT_PROVIDERS: ProviderInfo[] = [
+  {
+    id: "deepseek",
+    name: "DeepSeek",
+    models: [
+      { id: "deepseek-v4-flash", name: "DeepSeek-V4 Flash", description: "官方推荐快速模型" },
+      { id: "deepseek-v4-pro", name: "DeepSeek-V4 Pro", description: "官方推荐高能力模型" },
+    ],
+  },
+  {
+    id: "openai",
+    name: "OpenAI",
+    models: [
+      { id: "gpt-5.5", name: "GPT-5.5", description: "OpenAI 旗舰通用模型" },
+      { id: "gpt-5.4", name: "GPT-5.4", description: "高能力通用模型" },
+      { id: "gpt-5.4-mini", name: "GPT-5.4 mini", description: "轻量高性价比模型" },
+      { id: "gpt-5.4-nano", name: "GPT-5.4 nano", description: "低延迟小模型" },
+    ],
+  },
+  {
+    id: "anthropic",
+    name: "Anthropic Claude",
+    models: [
+      { id: "claude-fable-5", name: "Claude Fable 5", description: "官方最新推理模型" },
+      { id: "claude-opus-4-8", name: "Claude Opus 4.8", description: "复杂任务高能力模型" },
+      { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6", description: "均衡通用模型" },
+      { id: "claude-haiku-4-5", name: "Claude Haiku 4.5", description: "快速低成本模型" },
+    ],
+  },
+  {
+    id: "gemini",
+    name: "Google Gemini",
+    models: [
+      { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash", description: "Gemini 快速模型" },
+      { id: "gemini-3.1-pro", name: "Gemini 3.1 Pro", description: "Gemini Pro 模型" },
+      { id: "gemini-3-flash", name: "Gemini 3 Flash", description: "Gemini 低延迟模型" },
+      { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", description: "Gemini 2.5 高能力模型" },
+      { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", description: "Gemini 2.5 快速模型" },
+      { id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash-Lite", description: "Gemini 2.5 轻量模型" },
+    ],
+  },
+  {
+    id: "qwen",
+    name: "阿里云百炼 / Qwen",
+    models: [
+      { id: "qwen3.7-max", name: "Qwen3.7 Max", description: "百炼最新旗舰模型" },
+      { id: "qwen3.7-plus", name: "Qwen3.7 Plus", description: "高能力通用模型" },
+      { id: "qwen3.6-plus", name: "Qwen3.6 Plus", description: "稳定通用模型" },
+      { id: "qwen3.6-flash", name: "Qwen3.6 Flash", description: "快速低成本模型" },
+      { id: "qwen3.5-plus", name: "Qwen3.5 Plus", description: "通用增强模型" },
+      { id: "qwen3.5-flash", name: "Qwen3.5 Flash", description: "快速响应模型" },
+      { id: "qwen-plus", name: "Qwen Plus", description: "百炼通用模型" },
+      { id: "qwen-turbo", name: "Qwen Turbo", description: "百炼高吞吐模型" },
+      { id: "qwen-long", name: "Qwen Long", description: "长上下文模型" },
+      { id: "qwen3-coder-plus", name: "Qwen3 Coder Plus", description: "代码分析模型" },
+      { id: "qwen3-coder-flash", name: "Qwen3 Coder Flash", description: "快速代码模型" },
+      { id: "qwq-plus", name: "QwQ Plus", description: "推理模型" },
+      { id: "mimo-v2.5-pro", name: "MiMo-V2.5 Pro", description: "百炼可调用的小米模型" },
+      { id: "kimi-k2.6", name: "Kimi K2.6", description: "百炼可调用的 Kimi 模型" },
+      { id: "glm-5.1", name: "GLM-5.1", description: "百炼可调用的智谱模型" },
+    ],
+  },
+  {
+    id: "xiaomi",
+    name: "小米 MiMo",
+    models: [
+      { id: "MiMo-V2.5", name: "MiMo-V2.5", description: "小米主模型，通用对话" },
+      { id: "mimo-v2.5-pro", name: "MiMo-V2.5 Pro", description: "专业版，能力更强" },
+      { id: "MiMo-V2-Flash", name: "MiMo-V2 Flash", description: "轻量快速版" },
+      { id: "MiMo-V2-Pro", name: "MiMo-V2 Pro (legacy)", description: "历史兼容模型" },
+      { id: "MiMo-V2-Omni", name: "MiMo-V2 Omni (legacy)", description: "历史兼容多模态模型" },
+    ],
+  },
+  {
+    id: "zhipu",
+    name: "智谱 GLM",
+    models: [
+      { id: "glm-5.1", name: "GLM-5.1", description: "智谱最新深度思考模型" },
+      { id: "glm-5", name: "GLM-5", description: "智谱高能力通用模型" },
+      { id: "glm-5-turbo", name: "GLM-5 Turbo", description: "快速模型" },
+      { id: "glm-4.7", name: "GLM-4.7", description: "通用增强模型" },
+      { id: "glm-4.7-flash", name: "GLM-4.7 Flash", description: "免费/快速模型" },
+      { id: "glm-4.7-flashx", name: "GLM-4.7 FlashX", description: "高速模型" },
+      { id: "glm-4.6", name: "GLM-4.6", description: "长上下文通用模型" },
+      { id: "glm-4.5-air", name: "GLM-4.5 Air", description: "轻量通用模型" },
+      { id: "glm-4.5-airx", name: "GLM-4.5 AirX", description: "增强轻量模型" },
+      { id: "glm-4-long", name: "GLM-4 Long", description: "长上下文模型" },
+    ],
+  },
+  {
+    id: "moonshot",
+    name: "Moonshot Kimi",
+    models: [
+      { id: "kimi-k2.6", name: "Kimi K2.6", description: "Moonshot 最新专家混合模型" },
+      { id: "kimi-k2.5", name: "Kimi K2.5", description: "通用能力增强模型" },
+      { id: "kimi-k2", name: "Kimi K2", description: "通用模型" },
+      { id: "kimi-k2-thinking", name: "Kimi K2 Thinking", description: "深度思考模型" },
+      { id: "moonshot-v1", name: "Moonshot V1", description: "经典稳定模型" },
+    ],
+  },
+  {
+    id: "xai",
+    name: "xAI Grok",
+    models: [
+      { id: "grok-4.3", name: "Grok 4.3", description: "xAI 最新通用模型" },
+      { id: "grok-4.3-latest", name: "Grok 4.3 Latest", description: "最新别名模型" },
+      { id: "grok-4", name: "Grok 4", description: "上一代旗舰模型" },
+      { id: "grok-4-fast", name: "Grok 4 Fast", description: "快速模型" },
+      { id: "grok-code-fast", name: "Grok Code Fast", description: "代码快速模型" },
+    ],
+  },
+  {
+    id: "custom",
+    name: "自定义厂商",
+    apiUrl: "",
+    apiFormat: "openai-chat",
+    models: [
+      { id: "custom-model", name: "自定义模型", description: "OpenAI-compatible relay model" },
+    ],
+  },
+];
+const DEFAULT_API_URLS: Record<string, string> = {
+  deepseek: "https://api.deepseek.com/chat/completions",
+  openai: "https://api.openai.com/v1/responses",
+  anthropic: "https://api.anthropic.com/v1/messages",
+  gemini: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+  qwen: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+  xiaomi: "https://api.xiaomimimo.com/v1/chat/completions",
+  zhipu: "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+  moonshot: "https://api.moonshot.cn/v1/chat/completions",
+  xai: "https://api.x.ai/v1/chat/completions",
+  custom: "",
+};
+const providers = ref<ProviderInfo[]>(DEFAULT_PROVIDERS);
 const currentModels = computed(() => providers.value.find((p) => p.id === provider.value)?.models || []);
+const currentProvider = computed(() => providers.value.find((p) => p.id === provider.value));
+
+function providerDefaultApiUrl(item?: ProviderInfo) {
+  return item?.apiUrl || DEFAULT_API_URLS[item?.id || ""] || "";
+}
 
 function onProviderChange(value: string) {
   const selected = providers.value.find((p) => p.id === value);
   if (selected?.models?.length) model.value = selected.models[0].id;
+  apiUrl.value = providerDefaultApiUrl(selected);
 }
 
 function saveAi() {
+  if (provider.value === "custom" && !apiUrl.value.trim()) {
+    ElMessage.warning("请填写自定义接口链接");
+    return;
+  }
+  if (provider.value === "custom" && !model.value.trim()) {
+    ElMessage.warning("请填写自定义模型 ID");
+    return;
+  }
   settingsStore.setApiKey(apiKey.value);
   settingsStore.setProvider(provider.value);
-  settingsStore.setModel(model.value);
+  settingsStore.setModel(model.value.trim());
+  settingsStore.setAiApiUrl(apiUrl.value.trim());
   softPulse(settingsRef.value?.querySelector(".ai-save-btn"));
   ElMessage.success("设置已保存");
+}
+
+function ensureProviderSelection() {
+  if (!providers.value.length) return;
+  let selected = providers.value.find((p) => p.id === provider.value);
+  if (!selected) {
+    selected = providers.value[0];
+    provider.value = selected.id;
+  }
+  if (!selected.models.some((item) => item.id === model.value) && selected.models.length) {
+    model.value = selected.models[0].id;
+  }
+  if (!apiUrl.value.trim()) {
+    apiUrl.value = providerDefaultApiUrl(currentProvider.value);
+  }
+}
+
+async function loadProviders() {
+  try {
+    const remoteProviders = await getProviders();
+    providers.value = Array.isArray(remoteProviders) && remoteProviders.length ? remoteProviders : DEFAULT_PROVIDERS;
+  } catch {
+    providers.value = DEFAULT_PROVIDERS;
+  }
+  ensureProviderSelection();
+}
+
+async function testAiEndpoint() {
+  testingConnection.value = true;
+  try {
+    if (apiKey.value.trim()) {
+      await testAiConnection(apiKey.value.trim(), provider.value, model.value.trim(), apiUrl.value.trim());
+      softPulse(settingsRef.value?.querySelector(".ai-test-btn"));
+      ElMessage.success("AI 接口连接正常");
+      return;
+    }
+    const ok = await healthCheck();
+    softPulse(settingsRef.value?.querySelector(".ai-test-btn"));
+    ElMessage[ok ? "success" : "error"](ok ? "服务器连接正常" : "无法连接服务器");
+  } catch (e: any) {
+    ElMessage.error(e.message || "AI 接口连接失败");
+  } finally {
+    testingConnection.value = false;
+  }
 }
 
 async function testConnection() {
@@ -344,17 +542,7 @@ async function testConnection() {
 
 onMounted(async () => {
   animateSettingsPage();
-  try {
-    providers.value = await getProviders();
-    if (!currentModels.value.some((item) => item.id === model.value) && currentModels.value.length) {
-      model.value = currentModels.value[0].id;
-    }
-  } catch {
-    providers.value = [
-      { id: "deepseek", name: "DeepSeek", models: [{ id: "deepseek-v4-flash", name: "DeepSeek-V4 Flash", description: "轻量快速" }, { id: "deepseek-v4-pro", name: "DeepSeek-V4 Pro", description: "专业模型" }] },
-      { id: "xiaomi", name: "小米 MiMo", models: [{ id: "MiMo-V2.5", name: "MiMo-V2.5", description: "小米模型" }] },
-    ];
-  }
+  await loadProviders();
   try {
     await loadProfile();
     panelIn(settingsRef.value?.querySelector(".profile-card"), { y: 6, duration: 260 });
