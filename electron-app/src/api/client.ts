@@ -63,8 +63,13 @@ http.interceptors.request.use((config) => {
 http.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (axios.isAxiosError(error) && !error.response) {
-      error.message = `无法连接服务器：${getApiBaseUrl()}`;
+    if (axios.isAxiosError(error)) {
+      const data = error.response?.data as { message?: string; error?: string } | undefined;
+      if (data?.message || data?.error) {
+        error.message = data.message || data.error || error.message;
+      } else if (!error.response) {
+        error.message = `无法连接服务器：${getApiBaseUrl()}`;
+      }
     }
     return Promise.reject(error);
   }

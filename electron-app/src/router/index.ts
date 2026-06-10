@@ -50,6 +50,11 @@ const router = createRouter({
           component: () => import("../views/ChatView.vue"),
         },
         {
+          path: "novels",
+          name: "novels",
+          component: () => import("../views/NovelWorkspaceView.vue"),
+        },
+        {
           path: "settings",
           name: "settings",
           component: () => import("../views/SettingsView.vue"),

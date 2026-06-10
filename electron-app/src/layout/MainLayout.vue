@@ -102,6 +102,7 @@ const menuItems = [
   { path: "/hex", icon: "Grid", label: "十六进制查看" },
   { path: "/history", icon: "Clock", label: "历史记录" },
   { path: "/chat", icon: "ChatDotRound", label: "聊天" },
+  { path: "/novels", icon: "EditPen", label: "小说助手" },
   { path: "/settings", icon: "Setting", label: "设置" },
 ];
 
@@ -182,6 +183,7 @@ const pageTitle = computed(() => {
     case "/hex": return "十六进制查看";
     case "/history": return "历史记录";
     case "/chat": return "聊天";
+    case "/novels": return "小说助手";
     case "/settings": return "设置";
     default: return "猫爪工具";
   }

@@ -123,6 +123,257 @@ export interface ProviderInfo {
   models: ModelInfo[];
 }
 
+export interface NovelAiSettings {
+  enabled: boolean;
+  provider: string;
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  temperature: number;
+  maxTokens: number;
+  contextWindowSize: number;
+  systemPrompt: string;
+}
+
+export interface NovelProjectMeta {
+  title: string;
+  synopsis: string;
+  genre: string;
+  premise: string;
+  tone: string;
+  targetLength: string;
+  styleRules: string[];
+  worldRules: string[];
+  strictMode: boolean;
+  publishPlatform: string;
+  audienceChannel: string;
+  novelType: string;
+}
+
+export interface NovelAudienceInfo {
+  id: string;
+  label: string;
+  description: string;
+}
+
+export interface NovelTypeInfo {
+  id: string;
+  label: string;
+  audienceChannel: string;
+  description: string;
+  writingHints: string[];
+}
+
+export interface NovelTypeCatalogResponse {
+  audiences: NovelAudienceInfo[];
+  types: NovelTypeInfo[];
+}
+
+export interface PublishPlatformInfo {
+  id: string;
+  label: string;
+  description: string;
+  writingRules: string[];
+}
+
+export interface NovelOutlineNode {
+  id: string;
+  order: number;
+  title: string;
+  summary: string;
+  objective: string;
+  keyConflict: string;
+  mustKeep: string[];
+  forbidden: string[];
+}
+
+export interface NovelCharacterProfile {
+  id: string;
+  name: string;
+  role: string;
+  profile: string;
+  motivation: string;
+  constraint: string;
+  relationships: string;
+}
+
+export interface NovelForeshadowingItem {
+  id: string;
+  title: string;
+  setup: string;
+  payoff: string;
+  plannedReveal: string;
+  status: string;
+  notes: string;
+}
+
+export interface NovelChapter {
+  id: string;
+  order: number;
+  title: string;
+  summary: string;
+  purpose: string;
+  outlineNodeIds: string[];
+  characterIds: string[];
+  foreshadowingIds: string[];
+  mandatoryBeats: string[];
+  forbiddenContent: string[];
+  notes: string;
+  draft: string;
+}
+
+export interface OnboardingQuestion {
+  id: string;
+  title: string;
+  hint: string;
+  placeholder: string;
+}
+
+export interface OnboardingAnswer {
+  questionId: string;
+  question: string;
+  answer: string;
+}
+
+export interface NovelOnboardingState {
+  completed: boolean;
+  questions: OnboardingQuestion[];
+  answers: OnboardingAnswer[];
+}
+
+export interface NovelProject {
+  meta: NovelProjectMeta;
+  aiSettings: NovelAiSettings;
+  onboarding: NovelOnboardingState;
+  outlineNodes: NovelOutlineNode[];
+  characters: NovelCharacterProfile[];
+  foreshadowing: NovelForeshadowingItem[];
+  chapters: NovelChapter[];
+  updatedAt: string;
+}
+
+export interface NovelBookSummary {
+  id: string;
+  title: string;
+  genre: string;
+  updatedAt: string;
+  chapterCount: number;
+  onboardingCompleted: boolean;
+}
+
+export interface NovelLibraryIndex {
+  activeBookId: string;
+  books: NovelBookSummary[];
+}
+
+export interface NovelProjectEnvelope {
+  bookId: string;
+  project: NovelProject;
+}
+
+export interface NovelComplianceReport {
+  passed: boolean;
+  metaLabelHits: string[];
+  narrationMetaHits: string[];
+  missingMandatoryBeats: string[];
+  forbiddenHits: string[];
+  missingOutlineAnchors: string[];
+  missingChapterAnchors: string[];
+  groundedOutlineTitles: string[];
+  groundedCharacterNames: string[];
+}
+
+export interface NovelChapterGenerationResponse {
+  chapterId: string;
+  provider: string;
+  accepted: boolean;
+  draft: string;
+  promptPreview: string;
+  compliance: NovelComplianceReport;
+  rejectionReason: string;
+  warnings: string[];
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+}
+
+export interface NovelReviewIssue {
+  original: string;
+  description: string;
+  suggestion: string;
+}
+
+export interface OutlineBootstrapProposal {
+  id: string;
+  name: string;
+  pitch: string;
+  premise: string;
+  tone: string;
+  targetLength: string;
+  styleRules: string[];
+  worldRules: string[];
+  outlineNodes: Array<{
+    title: string;
+    summary: string;
+    objective: string;
+    keyConflict: string;
+    mustKeep: string[];
+    forbidden: string[];
+  }>;
+  characters: Array<{
+    name: string;
+    role: string;
+    profile: string;
+    motivation: string;
+    constraint: string;
+    relationships: string;
+  }>;
+}
+
+export interface NovelRagResult {
+  chunkId: string;
+  text: string;
+  score: number;
+  sourceType?: string;
+  chapterNumber?: number;
+}
+
+export interface NovelMemoryPack {
+  workingMemory?: unknown[];
+  episodicMemory?: unknown[];
+  semanticMemory?: unknown[];
+  scratchpad?: unknown;
+  [key: string]: unknown;
+}
+
+export interface NovelReadingPower {
+  chapterNumber?: number;
+  overallScore?: number;
+  hookScore?: number;
+  pacingScore?: number;
+  emotionScore?: number;
+  suspenseScore?: number;
+  suggestions?: string[];
+  [key: string]: unknown;
+}
+
+export interface NovelCommitRecord {
+  bookId?: string;
+  chapterNumber?: number;
+  status?: string;
+  createdAt?: string;
+  [key: string]: unknown;
+}
+
+export interface NovelStoryEvent {
+  eventId?: string;
+  eventType?: string;
+  subject?: string;
+  chapterNumber?: number;
+  description?: string;
+  [key: string]: unknown;
+}
+
 export interface SettingsState {
   apiKey: string;
   selectedProvider: string;
