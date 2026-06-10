@@ -16,6 +16,7 @@ import type {
   NovelAiSettings,
   NovelBookSummary,
   NovelChapter,
+  NovelEmbeddingSettings,
   NovelProject,
   NovelProjectEnvelope,
   NovelTypeCatalogResponse,
@@ -78,6 +79,19 @@ export const useNovelStore = defineStore("novel", () => {
       maxTokens: 3200,
       contextWindowSize: 0,
       systemPrompt: "",
+    };
+  }
+
+  function buildEmbeddingSettings(): NovelEmbeddingSettings {
+    const settings = useSettingsStore();
+    const baseUrl = settings.embeddingApiUrl.trim();
+    const apiKey = settings.embeddingApiKey.trim();
+    const model = settings.embeddingModel.trim() || "text-embedding-3-small";
+    return {
+      enabled: Boolean(settings.embeddingEnabled && baseUrl && apiKey && model),
+      baseUrl,
+      apiKey,
+      model,
     };
   }
 
@@ -261,6 +275,7 @@ export const useNovelStore = defineStore("novel", () => {
     hasProject,
     aiReady,
     buildAiSettings,
+    buildEmbeddingSettings,
     loadAll,
     loadLibraryOnly,
     applyEnvelope,

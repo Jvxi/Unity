@@ -162,6 +162,38 @@
           </el-form-item>
         </el-form>
       </el-card>
+
+      <el-card class="settings-card embedding-card">
+        <template #header>
+          <div class="card-title">
+            <el-icon :size="18" color="var(--color-primary)"><Connection /></el-icon>
+            <span>RAG Embedding</span>
+          </div>
+        </template>
+        <el-form label-width="96px" label-position="left">
+          <el-form-item label="启用">
+            <el-switch v-model="embeddingEnabled" />
+          </el-form-item>
+          <el-form-item label="接口链接">
+            <el-input v-model="embeddingApiUrl" placeholder="https://api.example.com/v1/embeddings" clearable />
+          </el-form-item>
+          <el-form-item label="模型">
+            <el-input v-model="embeddingModel" placeholder="text-embedding-3-small" clearable />
+          </el-form-item>
+          <el-form-item label="API Key">
+            <el-input v-model="embeddingApiKey" :type="showEmbeddingKey ? 'text' : 'password'" placeholder="输入 Embedding API Key">
+              <template #append>
+                <el-button @click="showEmbeddingKey = !showEmbeddingKey">
+                  <el-icon><component :is="showEmbeddingKey ? 'Hide' : 'View'" /></el-icon>
+                </el-button>
+              </template>
+            </el-input>
+          </el-form-item>
+          <el-form-item class="form-actions">
+            <el-button type="primary" class="embedding-save-btn" @click="saveEmbedding" round>保存 Embedding</el-button>
+          </el-form-item>
+        </el-form>
+      </el-card>
     </section>
   </div>
 </template>
@@ -321,6 +353,11 @@ const provider = ref(settingsStore.selectedProvider);
 const model = ref(settingsStore.selectedModel);
 const apiUrl = ref(settingsStore.aiApiUrl);
 const showKey = ref(false);
+const embeddingEnabled = ref(settingsStore.embeddingEnabled);
+const embeddingApiUrl = ref(settingsStore.embeddingApiUrl);
+const embeddingApiKey = ref(settingsStore.embeddingApiKey);
+const embeddingModel = ref(settingsStore.embeddingModel);
+const showEmbeddingKey = ref(false);
 const DEFAULT_PROVIDERS: ProviderInfo[] = [
   {
     id: "deepseek",
@@ -483,6 +520,19 @@ function saveAi() {
   settingsStore.setAiApiUrl(apiUrl.value.trim());
   softPulse(settingsRef.value?.querySelector(".ai-save-btn"));
   ElMessage.success("设置已保存");
+}
+
+function saveEmbedding() {
+  if (embeddingEnabled.value && (!embeddingApiUrl.value.trim() || !embeddingApiKey.value.trim() || !embeddingModel.value.trim())) {
+    ElMessage.warning("启用 Embedding 时需要填写接口链接、API Key 和模型");
+    return;
+  }
+  settingsStore.setEmbeddingEnabled(Boolean(embeddingEnabled.value));
+  settingsStore.setEmbeddingApiUrl(embeddingApiUrl.value.trim());
+  settingsStore.setEmbeddingApiKey(embeddingApiKey.value.trim());
+  settingsStore.setEmbeddingModel(embeddingModel.value.trim() || "text-embedding-3-small");
+  softPulse(settingsRef.value?.querySelector(".embedding-save-btn"));
+  ElMessage.success("Embedding 设置已保存");
 }
 
 function ensureProviderSelection() {
@@ -697,7 +747,8 @@ function animateSettingsPage() {
   grid-template-areas:
     "profile appearance"
     "profile security"
-    "ai ai";
+    "ai ai"
+    "embedding embedding";
   gap: 16px;
   align-items: stretch;
 }
@@ -716,6 +767,10 @@ function animateSettingsPage() {
 
 .ai-card {
   grid-area: ai;
+}
+
+.embedding-card {
+  grid-area: embedding;
 }
 
 .settings-card {
@@ -757,7 +812,8 @@ function animateSettingsPage() {
       "profile"
       "appearance"
       "security"
-      "ai";
+      "ai"
+      "embedding";
   }
 }
 

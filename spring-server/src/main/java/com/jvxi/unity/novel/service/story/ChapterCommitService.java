@@ -2,6 +2,7 @@ package com.jvxi.unity.novel.service.story;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jvxi.unity.novel.model.EmbeddingSettings;
 import com.jvxi.unity.novel.model.commit.ChapterCommit;
 import com.jvxi.unity.novel.model.commit.StoryEvent;
 import com.jvxi.unity.novel.persistence.entity.ChapterCommitEntity;
@@ -97,7 +98,7 @@ public class ChapterCommitService {
         try {
             String chapterText = (String) commitData.getOrDefault("chapter_text", "");
             if (!chapterText.isEmpty()) {
-                ragService.indexChapter(bookId, chapterNumber, chapterText);
+                ragService.indexChapter(bookId, chapterNumber, chapterText, embeddingSettings(commitData));
             }
         } catch (Exception e) {
             log.error("向量投影失败", e);
@@ -154,6 +155,17 @@ public class ChapterCommitService {
                 "relationships_new", List.of(),
                 "chapter_meta", Map.of("hook", Map.of("content", hook))
         );
+    }
+
+    private EmbeddingSettings embeddingSettings(Map<String, Object> commitData) {
+        Object rawSettings = commitData.get("embeddingSettings");
+        if (rawSettings == null) {
+            rawSettings = commitData.get("embedding_settings");
+        }
+        if (rawSettings == null) {
+            return null;
+        }
+        return objectMapper.convertValue(rawSettings, EmbeddingSettings.class);
     }
 
     @SuppressWarnings("unchecked")

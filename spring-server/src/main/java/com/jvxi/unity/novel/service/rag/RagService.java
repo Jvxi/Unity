@@ -2,6 +2,7 @@ package com.jvxi.unity.novel.service.rag;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jvxi.unity.novel.model.EmbeddingSettings;
 import com.jvxi.unity.novel.model.rag.RagResult;
 import com.jvxi.unity.novel.persistence.entity.Bm25TermEntity;
 import com.jvxi.unity.novel.persistence.entity.RagQueryLogEntity;
@@ -52,20 +53,27 @@ public class RagService {
      * 混合检索（默认）
      */
     public List<RagResult> hybridSearch(String bookId, String query, int topK) {
+        return hybridSearch(bookId, query, topK, null);
+    }
+
+    public List<RagResult> hybridSearch(String bookId, String query, int topK, EmbeddingSettings embeddingSettings) {
         long startTime = System.currentTimeMillis();
+        int limit = normalizeTopK(topK);
 
         // 向量检索
-        List<RagResult> vectorResults = vectorSearch(bookId, query, topK);
+        List<RagResult> vectorResults = embeddingService.isAvailable(embeddingSettings)
+                ? vectorSearch(bookId, query, limit, embeddingSettings)
+                : List.of();
 
         // BM25检索
-        List<RagResult> bm25Results = bm25Search(bookId, query, topK);
+        List<RagResult> bm25Results = bm25Search(bookId, query, limit);
 
         // RRF融合
         List<RagResult> fusedResults = rrfFusion(vectorResults, bm25Results);
 
         // 截断到topK
-        if (fusedResults.size() > topK) {
-            fusedResults = fusedResults.subList(0, topK);
+        if (fusedResults.size() > limit) {
+            fusedResults = fusedResults.subList(0, limit);
         }
 
         // 记录查询日志
@@ -79,10 +87,15 @@ public class RagService {
      * 向量检索
      */
     public List<RagResult> vectorSearch(String bookId, String query, int topK) {
+        return vectorSearch(bookId, query, topK, null);
+    }
+
+    public List<RagResult> vectorSearch(String bookId, String query, int topK, EmbeddingSettings embeddingSettings) {
         long startTime = System.currentTimeMillis();
+        int limit = normalizeTopK(topK);
 
         // 获取查询向量
-        List<Float> queryEmbedding = embeddingService.embed(query);
+        List<Float> queryEmbedding = embeddingService.embed(query, embeddingSettings);
         if (queryEmbedding == null || queryEmbedding.isEmpty()) {
             log.warn("向量检索失败：无法获取查询向量");
             return List.of();
@@ -106,7 +119,7 @@ public class RagService {
                     );
                 })
                 .sorted((a, b) -> Double.compare(b.score(), a.score()))
-                .limit(topK)
+                .limit(limit)
                 .collect(Collectors.toList());
 
         long latency = System.currentTimeMillis() - startTime;
@@ -120,6 +133,7 @@ public class RagService {
      */
     public List<RagResult> bm25Search(String bookId, String query, int topK) {
         long startTime = System.currentTimeMillis();
+        int limit = normalizeTopK(topK);
 
         // 分词
         List<String> terms = tokenize(query);
@@ -136,6 +150,7 @@ public class RagService {
         // 计算每个chunk的BM25分数
         Map<String, Double> chunkScores = new HashMap<>();
         Map<String, String> chunkTexts = new HashMap<>();
+        Map<String, Integer> chapterNumbers = new HashMap<>();
 
         for (String term : terms) {
             List<Bm25TermEntity> termEntities = bm25TermRepository.findByBookIdAndTerm(bookId, term);
@@ -151,6 +166,12 @@ public class RagService {
                 double score = idf * tfNorm;
 
                 chunkScores.merge(chunkId, score, Double::sum);
+                if (entity.getChunkText() != null && !entity.getChunkText().isBlank()) {
+                    chunkTexts.putIfAbsent(chunkId, entity.getChunkText());
+                }
+                if (entity.getChapterNumber() != null) {
+                    chapterNumbers.putIfAbsent(chunkId, entity.getChapterNumber());
+                }
             }
         }
 
@@ -160,13 +181,13 @@ public class RagService {
                     String chunkId = entry.getKey();
                     // 获取chunk文本
                     VectorEmbeddingEntity vectorEntity = vectorEmbeddingRepository.findByBookIdAndChunkId(bookId, chunkId).orElse(null);
-                    String chunkText = vectorEntity != null ? vectorEntity.getChunkText() : "";
-                    Integer chapterNumber = vectorEntity != null ? vectorEntity.getChapterNumber() : null;
+                    String chunkText = chunkTexts.getOrDefault(chunkId, vectorEntity != null ? vectorEntity.getChunkText() : "");
+                    Integer chapterNumber = chapterNumbers.getOrDefault(chunkId, vectorEntity != null ? vectorEntity.getChapterNumber() : null);
 
                     return new RagResult(chunkId, chunkText, entry.getValue(), 0.0, chapterNumber, "bm25");
                 })
                 .sorted((a, b) -> Double.compare(b.score(), a.score()))
-                .limit(topK)
+                .limit(limit)
                 .collect(Collectors.toList());
 
         long latency = System.currentTimeMillis() - startTime;
@@ -218,6 +239,11 @@ public class RagService {
      */
     @Transactional
     public void addEmbedding(String bookId, String chunkId, String text, List<Float> embedding) {
+        addEmbedding(bookId, chunkId, text, embedding, null);
+    }
+
+    @Transactional
+    public void addEmbedding(String bookId, String chunkId, String text, List<Float> embedding, Integer chapterNumber) {
         // 删除已有的
         vectorEmbeddingRepository.findByBookIdAndChunkId(bookId, chunkId)
                 .ifPresent(entity -> vectorEmbeddingRepository.delete(entity));
@@ -227,6 +253,7 @@ public class RagService {
         entity.setBookId(bookId);
         entity.setChunkId(chunkId);
         entity.setChunkText(text);
+        entity.setChapterNumber(chapterNumber);
         entity.setEmbedding(floatsToBytes(embedding));
 
         vectorEmbeddingRepository.save(entity);
@@ -237,6 +264,11 @@ public class RagService {
      */
     @Transactional
     public void indexChapter(String bookId, int chapterNumber, String chapterText) {
+        indexChapter(bookId, chapterNumber, chapterText, null);
+    }
+
+    @Transactional
+    public void indexChapter(String bookId, int chapterNumber, String chapterText, EmbeddingSettings embeddingSettings) {
         // 1. 分块
         List<String> chunks = splitIntoChunks(chapterText, 500);
 
@@ -246,13 +278,15 @@ public class RagService {
             String chunkId = String.format("ch%04d_p%d", chapterNumber, i);
 
             // 生成向量
-            List<Float> embedding = embeddingService.embed(chunk);
-            if (embedding != null && !embedding.isEmpty()) {
-                addEmbedding(bookId, chunkId, chunk, embedding);
+            if (embeddingService.isAvailable(embeddingSettings)) {
+                List<Float> embedding = embeddingService.embed(chunk, embeddingSettings);
+                if (embedding != null && !embedding.isEmpty()) {
+                    addEmbedding(bookId, chunkId, chunk, embedding, chapterNumber);
+                }
             }
 
             // BM25索引
-            indexBm25Terms(bookId, chunkId, chunk);
+            indexBm25Terms(bookId, chunkId, chunk, chapterNumber);
         }
 
         log.info("章节索引完成: bookId={}, chapter={}, chunks={}", bookId, chapterNumber, chunks.size());
@@ -276,6 +310,10 @@ public class RagService {
     // ============ 私有辅助方法 ============
 
     private void indexBm25Terms(String bookId, String chunkId, String text) {
+        indexBm25Terms(bookId, chunkId, text, null);
+    }
+
+    private void indexBm25Terms(String bookId, String chunkId, String text, Integer chapterNumber) {
         // 删除已有的
         bm25TermRepository.findByBookIdAndChunkId(bookId, chunkId)
                 .forEach(entity -> bm25TermRepository.delete(entity));
@@ -292,8 +330,14 @@ public class RagService {
             entity.setChunkId(chunkId);
             entity.setTerm(entry.getKey());
             entity.setTermFrequency(entry.getValue().intValue());
+            entity.setChunkText(text);
+            entity.setChapterNumber(chapterNumber);
             bm25TermRepository.save(entity);
         }
+    }
+
+    private int normalizeTopK(int topK) {
+        return Math.max(1, Math.min(topK <= 0 ? 10 : topK, 50));
     }
 
     private List<String> tokenize(String text) {

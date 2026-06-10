@@ -22,6 +22,12 @@ public class Bm25TermEntity {
     @Column(name = "term_frequency", nullable = false)
     private Integer termFrequency;
 
+    @Column(name = "chunk_text", columnDefinition = "TEXT")
+    private String chunkText;
+
+    @Column(name = "chapter_number")
+    private Integer chapterNumber;
+
     // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -37,6 +43,12 @@ public class Bm25TermEntity {
 
     public Integer getTermFrequency() { return termFrequency; }
     public void setTermFrequency(Integer termFrequency) { this.termFrequency = termFrequency; }
+
+    public String getChunkText() { return chunkText; }
+    public void setChunkText(String chunkText) { this.chunkText = chunkText; }
+
+    public Integer getChapterNumber() { return chapterNumber; }
+    public void setChapterNumber(Integer chapterNumber) { this.chapterNumber = chapterNumber; }
 }
 
 

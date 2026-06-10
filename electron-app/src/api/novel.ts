@@ -4,6 +4,7 @@ import type {
   NovelBookSummary,
   NovelChapterGenerationResponse,
   NovelCommitRecord,
+  NovelEmbeddingSettings,
   NovelLibraryIndex,
   NovelMemoryPack,
   NovelProject,
@@ -140,8 +141,17 @@ export async function fetchNovelRagStats(bookId: string) {
   return res.data;
 }
 
-export async function searchNovelRag(bookId: string, query: string, topK = 8) {
-  const res = await http.post<NovelRagResult[]>(`/api/novels/rag/${encodeURIComponent(bookId)}/search`, { query, topK });
+export async function searchNovelRag(
+  bookId: string,
+  query: string,
+  topK = 8,
+  embeddingSettings?: NovelEmbeddingSettings
+) {
+  const res = await http.post<NovelRagResult[]>(`/api/novels/rag/${encodeURIComponent(bookId)}/search`, {
+    query,
+    topK,
+    embeddingSettings,
+  });
   return res.data;
 }
 

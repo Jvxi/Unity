@@ -2,9 +2,9 @@ package com.jvxi.unity.novel.service.rag;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jvxi.unity.novel.model.EmbeddingSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
@@ -14,21 +14,13 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
 public class EmbeddingService {
 
     private static final Logger log = LoggerFactory.getLogger(EmbeddingService.class);
-
-    @Value("${inkfield.rag.embed-base-url:}")
-    private String embedBaseUrl;
-
-    @Value("${inkfield.rag.embed-model:text-embedding-3-small}")
-    private String embedModel;
-
-    @Value("${inkfield.rag.embed-api-key:}")
-    private String embedApiKey;
 
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
@@ -40,125 +32,142 @@ public class EmbeddingService {
                 .build();
     }
 
-    /**
-     * 生成文本嵌入向量
-     */
     public List<Float> embed(String text) {
-        if (embedBaseUrl == null || embedBaseUrl.isEmpty()) {
-            log.warn("Embedding API未配置，返回空向量");
+        return embed(text, null);
+    }
+
+    public List<Float> embed(String text, EmbeddingSettings settings) {
+        if (!isAvailable(settings) || text == null || text.isBlank()) {
             return List.of();
         }
 
         try {
             Map<String, Object> request = Map.of(
-                    "model", embedModel,
+                    "model", normalizedModel(settings),
                     "input", text
             );
 
-            String jsonBody = objectMapper.writeValueAsString(request);
-
             HttpRequest httpRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(embedBaseUrl + "/embeddings"))
+                    .uri(URI.create(embeddingEndpoint(settings.baseUrl())))
                     .header("Content-Type", "application/json")
-                    .header("Authorization", "Bearer " + embedApiKey)
-                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                    .header("Authorization", "Bearer " + settings.apiKey().trim())
+                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(request)))
                     .timeout(Duration.ofSeconds(30))
                     .build();
 
             HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
-
-            if (response.statusCode() != 200) {
-                log.error("Embedding API返回错误: status={}, body={}", response.statusCode(), response.body());
+            if (response.statusCode() >= 400) {
+                log.warn("Embedding API returned status {}", response.statusCode());
                 return List.of();
             }
 
-            JsonNode jsonNode = objectMapper.readTree(response.body());
-            JsonNode data = jsonNode.get("data");
-            if (data != null && data.isArray() && !data.isEmpty()) {
-                JsonNode embedding = data.get(0).get("embedding");
-                if (embedding != null && embedding.isArray()) {
-                    List<Float> result = new ArrayList<>();
-                    for (JsonNode value : embedding) {
-                        result.add(value.floatValue());
-                    }
-                    return result;
-                }
+            JsonNode data = objectMapper.readTree(response.body()).path("data");
+            if (data.isArray() && !data.isEmpty()) {
+                return readEmbedding(data.get(0).path("embedding"));
             }
-
-            log.error("无法解析Embedding API响应");
             return List.of();
-
-        } catch (Exception e) {
-            log.error("调用Embedding API失败", e);
+        } catch (Exception exception) {
+            log.warn("Embedding API call failed: {}", sanitize(exception.getMessage()));
             return List.of();
         }
     }
 
-    /**
-     * 批量生成嵌入向量
-     */
-    public List<List<Float>> embedBatch(List<String> texts) {
-        if (embedBaseUrl == null || embedBaseUrl.isEmpty()) {
-            log.warn("Embedding API未配置，返回空向量列表");
-            return texts.stream().map(t -> List.<Float>of()).toList();
+    public List<List<Float>> embedBatch(List<String> texts, EmbeddingSettings settings) {
+        if (!isAvailable(settings) || texts == null || texts.isEmpty()) {
+            return texts == null ? List.of() : texts.stream().map(ignored -> List.<Float>of()).toList();
         }
 
         try {
             Map<String, Object> request = Map.of(
-                    "model", embedModel,
+                    "model", normalizedModel(settings),
                     "input", texts
             );
 
-            String jsonBody = objectMapper.writeValueAsString(request);
-
             HttpRequest httpRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(embedBaseUrl + "/embeddings"))
+                    .uri(URI.create(embeddingEndpoint(settings.baseUrl())))
                     .header("Content-Type", "application/json")
-                    .header("Authorization", "Bearer " + embedApiKey)
-                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                    .header("Authorization", "Bearer " + settings.apiKey().trim())
+                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(request)))
                     .timeout(Duration.ofSeconds(60))
                     .build();
 
             HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
-
-            if (response.statusCode() != 200) {
-                log.error("Embedding Batch API返回错误: status={}, body={}", response.statusCode(), response.body());
-                return texts.stream().map(t -> List.<Float>of()).toList();
+            if (response.statusCode() >= 400) {
+                log.warn("Embedding batch API returned status {}", response.statusCode());
+                return texts.stream().map(ignored -> List.<Float>of()).toList();
             }
 
-            JsonNode jsonNode = objectMapper.readTree(response.body());
-            JsonNode data = jsonNode.get("data");
-            if (data != null && data.isArray()) {
-                List<List<Float>> results = new ArrayList<>();
-                for (JsonNode item : data) {
-                    JsonNode embedding = item.get("embedding");
-                    if (embedding != null && embedding.isArray()) {
-                        List<Float> vector = new ArrayList<>();
-                        for (JsonNode value : embedding) {
-                            vector.add(value.floatValue());
-                        }
-                        results.add(vector);
-                    } else {
-                        results.add(List.of());
-                    }
-                }
-                return results;
+            JsonNode data = objectMapper.readTree(response.body()).path("data");
+            if (!data.isArray()) {
+                return texts.stream().map(ignored -> List.<Float>of()).toList();
             }
 
-            log.error("无法解析Embedding Batch API响应");
-            return texts.stream().map(t -> List.<Float>of()).toList();
-
-        } catch (Exception e) {
-            log.error("调用Embedding Batch API失败", e);
-            return texts.stream().map(t -> List.<Float>of()).toList();
+            List<List<Float>> result = new ArrayList<>();
+            for (JsonNode item : data) {
+                result.add(readEmbedding(item.path("embedding")));
+            }
+            while (result.size() < texts.size()) {
+                result.add(List.of());
+            }
+            return result;
+        } catch (Exception exception) {
+            log.warn("Embedding batch API call failed: {}", sanitize(exception.getMessage()));
+            return texts.stream().map(ignored -> List.<Float>of()).toList();
         }
     }
 
-    /**
-     * 检查Embedding API是否可用
-     */
-    public boolean isAvailable() {
-        return embedBaseUrl != null && !embedBaseUrl.isEmpty() && embedApiKey != null && !embedApiKey.isEmpty();
+    public boolean isAvailable(EmbeddingSettings settings) {
+        return settings != null
+                && settings.enabled()
+                && settings.baseUrl() != null
+                && !settings.baseUrl().isBlank()
+                && settings.apiKey() != null
+                && !settings.apiKey().isBlank()
+                && normalizedModel(settings) != null
+                && !normalizedModel(settings).isBlank();
+    }
+
+    private List<Float> readEmbedding(JsonNode embeddingNode) {
+        if (embeddingNode == null || !embeddingNode.isArray()) {
+            return List.of();
+        }
+        List<Float> result = new ArrayList<>();
+        for (JsonNode value : embeddingNode) {
+            result.add(value.floatValue());
+        }
+        return result;
+    }
+
+    private String normalizedModel(EmbeddingSettings settings) {
+        String model = settings == null ? "" : text(settings.model());
+        return model.isBlank() ? "text-embedding-3-small" : model;
+    }
+
+    private String embeddingEndpoint(String baseUrl) {
+        String normalized = text(baseUrl);
+        while (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        String lower = normalized.toLowerCase(Locale.ROOT);
+        if (lower.endsWith("/embeddings")) {
+            return normalized;
+        }
+        if (lower.endsWith("/v1")) {
+            return normalized + "/embeddings";
+        }
+        return normalized + "/v1/embeddings";
+    }
+
+    private String sanitize(String message) {
+        if (message == null) {
+            return "";
+        }
+        return message
+                .replaceAll("(?i)bearer\\s+[A-Za-z0-9._~+/=-]+", "Bearer [hidden]")
+                .replaceAll("https?://\\S+", "[hidden-url]");
+    }
+
+    private String text(String value) {
+        return value == null ? "" : value.trim();
     }
 }
-

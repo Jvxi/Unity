@@ -135,6 +135,13 @@ export interface NovelAiSettings {
   systemPrompt: string;
 }
 
+export interface NovelEmbeddingSettings {
+  enabled: boolean;
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+}
+
 export interface NovelProjectMeta {
   title: string;
   synopsis: string;
@@ -332,9 +339,11 @@ export interface OutlineBootstrapProposal {
 
 export interface NovelRagResult {
   chunkId: string;
-  text: string;
+  chunkText?: string;
+  text?: string;
   score: number;
-  sourceType?: string;
+  rrfScore?: number;
+  source?: string;
   chapterNumber?: number;
 }
 

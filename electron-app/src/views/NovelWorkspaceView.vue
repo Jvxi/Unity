@@ -390,7 +390,7 @@
               <div class="rag-results">
                 <div v-for="result in ragResults" :key="result.chunkId || result.text" class="rag-item">
                   <strong>{{ Math.round((result.score || 0) * 100) / 100 }}</strong>
-                  <p>{{ result.text }}</p>
+                  <p>{{ result.chunkText || result.text }}</p>
                 </div>
               </div>
             </div>
@@ -990,6 +990,7 @@ async function handleCommitChapter() {
     await commitNovelChapter(store.activeBookId, currentChapter.value.order, {
       chapter_text: text,
       summary_text: currentChapter.value.summary,
+      embeddingSettings: store.buildEmbeddingSettings(),
       extraction_result: {
         chapter_meta: {
           hook: { content: lastLine },
@@ -1043,7 +1044,7 @@ async function loadMemoryPack() {
 
 async function handleRagSearch() {
   if (!ragQuery.value.trim() || !store.activeBookId) return;
-  ragResults.value = await searchNovelRag(store.activeBookId, ragQuery.value.trim());
+  ragResults.value = await searchNovelRag(store.activeBookId, ragQuery.value.trim(), 8, store.buildEmbeddingSettings());
 }
 
 async function handleImportOutline() {
