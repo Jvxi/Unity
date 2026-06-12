@@ -48,6 +48,11 @@ public class DeepSeekService {
 
     public String analyzeWithAI(PeInfo peInfo, List<VtableInfo> vtables,
                                 String apiKey, String providerId, String modelId, String customApiUrl) {
+        return analyzeWithAI(peInfo, vtables, null, apiKey, providerId, modelId, customApiUrl);
+    }
+
+    public String analyzeWithAI(PeInfo peInfo, List<VtableInfo> vtables, WorldAnalysisResult worldAnalysis,
+                                String apiKey, String providerId, String modelId, String customApiUrl) {
         if (apiKey == null || apiKey.isBlank()) return null;
 
         AiProvider provider = findProvider(providerId);
@@ -64,7 +69,7 @@ public class DeepSeekService {
         }
 
         try {
-            return callApi(provider, buildPrompt(peInfo, vtables), apiKey, apiUrl, selectedModel);
+            return callApi(provider, buildPrompt(peInfo, vtables, worldAnalysis), apiKey, apiUrl, selectedModel);
         } catch (Exception e) {
             return "AI 分析失败: " + e.getMessage();
         }
@@ -219,9 +224,9 @@ public class DeepSeekService {
         return model;
     }
 
-    private String buildPrompt(PeInfo peInfo, List<VtableInfo> vtables) {
+    private String buildPrompt(PeInfo peInfo, List<VtableInfo> vtables, WorldAnalysisResult worldAnalysis) {
         StringBuilder sb = new StringBuilder();
-        sb.append("你是一个 Windows PE 逆向分析专家。请分析以下 DLL 文件的虚表（vtable）信息。\n\n");
+        sb.append("你是一个 Windows PE / 游戏引擎逆向分析专家。请优先分析世界数组、对象数组、名称池等关键全局数据，再分析虚表（vtable）信息。\n\n");
         sb.append("## PE 基本信息\n");
         sb.append("- 文件名: ").append(peInfo.getFileName()).append("\n");
         sb.append("- 架构: ").append(peInfo.getMachine()).append(" (").append(peInfo.getMagic()).append(")\n");
@@ -263,6 +268,10 @@ public class DeepSeekService {
             sb.append("\n");
         }
 
+        if (worldAnalysis != null) {
+            appendWorldAnalysisPrompt(sb, worldAnalysis);
+        }
+
         sb.append("## 检测到的虚表候选 (").append(vtables.size()).append(" 个)\n");
         for (int i = 0; i < vtables.size(); i++) {
             VtableInfo vt = vtables.get(i);
@@ -280,11 +289,65 @@ public class DeepSeekService {
         }
 
         sb.append("\n## 任务\n");
-        sb.append("1. 确认哪些是真实的虚函数表，哪些可能是误报\n");
-        sb.append("2. 推测每个虚表可能的类名（如果 RTTI 没有提供）\n");
-        sb.append("3. 简要说明该 DLL 的整体结构特征\n");
+        sb.append("1. 优先判断世界数组 / WorldContext / 对象数组 / 名称池候选是否可信，给出最值得人工跟进的 RVA/VA\n");
+        sb.append("2. 将世界数组相关候选与导出符号、字符串、指针数组、虚表候选交叉验证，说明证据链强弱\n");
+        sb.append("3. 确认哪些是真实的虚函数表，哪些可能是误报\n");
+        sb.append("4. 推测关键虚表可能的类名（如果 RTTI 没有提供）\n");
+        sb.append("5. 简要说明该 DLL 的整体结构特征和下一步逆向建议\n");
         sb.append("请用中文回答，简洁明了。\n");
         return sb.toString();
+    }
+
+    private void appendWorldAnalysisPrompt(StringBuilder sb, WorldAnalysisResult worldAnalysis) {
+        sb.append("## 世界数组 / 对象数组 / 名称池优先分析\n");
+        if (worldAnalysis.getSummary() != null) {
+            sb.append("- 摘要: ").append(worldAnalysis.getSummary()).append("\n");
+        }
+        if (worldAnalysis.getPriorityHints() != null && !worldAnalysis.getPriorityHints().isEmpty()) {
+            sb.append("- 优先提示:\n");
+            for (String hint : worldAnalysis.getPriorityHints()) {
+                sb.append("  - ").append(hint).append("\n");
+            }
+        }
+        if (worldAnalysis.getWorldArrayCandidates() != null && !worldAnalysis.getWorldArrayCandidates().isEmpty()) {
+            sb.append("- 高价值候选:\n");
+            int limit = Math.min(worldAnalysis.getWorldArrayCandidates().size(), 20);
+            for (int i = 0; i < limit; i++) {
+                WorldArrayCandidate candidate = worldAnalysis.getWorldArrayCandidates().get(i);
+                sb.append("  ").append(i + 1).append(". ")
+                    .append(candidate.getName() != null ? candidate.getName() : candidate.getKind())
+                    .append(" kind=").append(candidate.getKind())
+                    .append(" RVA=").append(candidate.getRva())
+                    .append(" VA=").append(candidate.getVa())
+                    .append(" section=").append(candidate.getSectionName())
+                    .append(" confidence=").append(String.format(Locale.ROOT, "%.2f", candidate.getConfidence()))
+                    .append(" method=").append(candidate.getDetectionMethod())
+                    .append(" pointerCount=").append(candidate.getPointerCount())
+                    .append("\n");
+                if (candidate.getEvidence() != null && !candidate.getEvidence().isEmpty()) {
+                    sb.append("     evidence=").append(String.join(" | ", candidate.getEvidence())).append("\n");
+                }
+                if (candidate.getRelatedStrings() != null && !candidate.getRelatedStrings().isEmpty()) {
+                    sb.append("     relatedStrings=").append(String.join(" | ", candidate.getRelatedStrings())).append("\n");
+                }
+            }
+        } else {
+            sb.append("- 高价值候选: 暂无\n");
+        }
+        if (worldAnalysis.getRelatedData() != null && !worldAnalysis.getRelatedData().isEmpty()) {
+            sb.append("- 相关证据:\n");
+            int limit = Math.min(worldAnalysis.getRelatedData().size(), 30);
+            for (int i = 0; i < limit; i++) {
+                WorldRelatedData data = worldAnalysis.getRelatedData().get(i);
+                sb.append("  - ").append(data.getKind())
+                    .append(" ").append(data.getName())
+                    .append(" RVA=").append(data.getRva())
+                    .append(" section=").append(data.getSectionName())
+                    .append(" value=").append(data.getValue())
+                    .append("\n");
+            }
+        }
+        sb.append("\n");
     }
 
     private String callApi(AiProvider provider, String prompt, String apiKey, String apiUrl, String model) {

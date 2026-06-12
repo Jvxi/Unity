@@ -2,6 +2,7 @@ package com.jvxi.unity.controller;
 
 import com.jvxi.unity.model.PeInfo;
 import com.jvxi.unity.model.VtableInfo;
+import com.jvxi.unity.model.WorldAnalysisResult;
 import com.jvxi.unity.service.*;
 import com.jvxi.unity.service.pe.PeParserAggregator;
 import org.springframework.http.HttpHeaders;
@@ -25,6 +26,7 @@ public class ToolController {
     private final ReportExportService reportService;
     private final PeParserAggregator peParser;
     private final VtableDetectorService vtableDetector;
+    private final WorldArrayAnalysisService worldArrayAnalysisService;
     private final DeepSeekService deepSeekService;
 
     public ToolController(StringExtractService stringService,
@@ -32,12 +34,14 @@ public class ToolController {
                           ReportExportService reportService,
                           PeParserAggregator peParser,
                           VtableDetectorService vtableDetector,
+                          WorldArrayAnalysisService worldArrayAnalysisService,
                           DeepSeekService deepSeekService) {
         this.stringService = stringService;
         this.hexService = hexService;
         this.reportService = reportService;
         this.peParser = peParser;
         this.vtableDetector = vtableDetector;
+        this.worldArrayAnalysisService = worldArrayAnalysisService;
         this.deepSeekService = deepSeekService;
     }
 
@@ -88,11 +92,12 @@ public class ToolController {
             byte[] data = file.getBytes();
             PeInfo peInfo = peParser.parse(data, file.getOriginalFilename());
             List<VtableInfo> vtables = vtableDetector.detect(data, peInfo);
+            WorldAnalysisResult worldAnalysis = worldArrayAnalysisService.analyze(data, peInfo);
             String aiSummary = null;
             if (apiKey != null && !apiKey.isBlank()) {
-                aiSummary = deepSeekService.analyzeWithAI(peInfo, vtables, apiKey, provider, model, apiUrl);
+                aiSummary = deepSeekService.analyzeWithAI(peInfo, vtables, worldAnalysis, apiKey, provider, model, apiUrl);
             }
-            String json = reportService.exportJson(peInfo, vtables, aiSummary);
+            String json = reportService.exportJson(peInfo, vtables, worldAnalysis, aiSummary);
             return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=report.json")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -113,11 +118,12 @@ public class ToolController {
             byte[] data = file.getBytes();
             PeInfo peInfo = peParser.parse(data, file.getOriginalFilename());
             List<VtableInfo> vtables = vtableDetector.detect(data, peInfo);
+            WorldAnalysisResult worldAnalysis = worldArrayAnalysisService.analyze(data, peInfo);
             String aiSummary = null;
             if (apiKey != null && !apiKey.isBlank()) {
-                aiSummary = deepSeekService.analyzeWithAI(peInfo, vtables, apiKey, provider, model, apiUrl);
+                aiSummary = deepSeekService.analyzeWithAI(peInfo, vtables, worldAnalysis, apiKey, provider, model, apiUrl);
             }
-            String html = reportService.exportHtml(peInfo, vtables, aiSummary);
+            String html = reportService.exportHtml(peInfo, vtables, worldAnalysis, aiSummary);
             return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=report.html")
                 .contentType(MediaType.TEXT_HTML)

@@ -1,31 +1,18 @@
 package com.jvxi.unity.novel.service;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.jvxi.unity.novel.exception.GenerationCancelledException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jvxi.unity.novel.model.AiSettings;
 import com.jvxi.unity.novel.model.Chapter;
@@ -38,7 +25,9 @@ import com.jvxi.unity.novel.model.ComplianceReport;
 import com.jvxi.unity.novel.model.NovelTypeInfo;
 import com.jvxi.unity.novel.model.OutlineNode;
 import com.jvxi.unity.novel.model.Project;
+import com.jvxi.unity.novel.model.ProjectEnvelope;
 import com.jvxi.unity.novel.model.PublishPlatformInfo;
+import com.jvxi.unity.novel.service.PromptContextAugmenter.PromptAugmentation;
 import com.jvxi.unity.novel.service.PromptBuilder.GenerationContext;
 
 @Service
@@ -52,8 +41,10 @@ public class GenerationService {
     private final PublishPlatformCatalog publishPlatformCatalog;
     private final NovelTypeCatalog novelTypeCatalog;
     private final TokenUsageService tokenUsageService;
+    private final AiGatewayService aiGatewayService;
+    private final AiJsonRepairService aiJsonRepairService;
+    private final PromptContextAugmenter promptContextAugmenter;
     private final ObjectMapper objectMapper;
-    private final HttpClient httpClient;
 
     public GenerationService(
         ProjectStore projectStore,
@@ -65,8 +56,10 @@ public class GenerationService {
         PublishPlatformCatalog publishPlatformCatalog,
         NovelTypeCatalog novelTypeCatalog,
         TokenUsageService tokenUsageService,
-        ObjectMapper objectMapper,
-        HttpClient aiHttpClient
+        AiGatewayService aiGatewayService,
+        AiJsonRepairService aiJsonRepairService,
+        PromptContextAugmenter promptContextAugmenter,
+        ObjectMapper objectMapper
     ) {
         this.projectStore = projectStore;
         this.normalizer = normalizer;
@@ -77,8 +70,10 @@ public class GenerationService {
         this.publishPlatformCatalog = publishPlatformCatalog;
         this.novelTypeCatalog = novelTypeCatalog;
         this.tokenUsageService = tokenUsageService;
+        this.aiGatewayService = aiGatewayService;
+        this.aiJsonRepairService = aiJsonRepairService;
+        this.promptContextAugmenter = promptContextAugmenter;
         this.objectMapper = objectMapper;
-        this.httpClient = aiHttpClient;
     }
 
     public ChapterGenerationResponse generateChapter(String chapterId) {
@@ -87,9 +82,9 @@ public class GenerationService {
 
     public ChapterGenerationResponse generateChapter(String chapterId, AiSettings aiSettings) {
         try {
-            GenerationSession session = prepareSession(chapterId, aiSettings);
-            StringBuilder draftBuilder = new StringBuilder();
             List<String> warnings = new ArrayList<>();
+            GenerationSession session = prepareSession(chapterId, aiSettings, warnings);
+            StringBuilder draftBuilder = new StringBuilder();
             String provider = generateDraftContent(session, draftBuilder, null, warnings, null);
             return finalizeGeneration(session, chapterId, draftBuilder.toString(), provider, warnings);
         } catch (IOException | InterruptedException exception) {
@@ -112,9 +107,9 @@ public class GenerationService {
         emitter.onError(throwable -> cancelled.set(true));
 
         try {
-            GenerationSession session = prepareSession(chapterId, aiSettings);
-            StringBuilder draftBuilder = new StringBuilder();
             List<String> warnings = new ArrayList<>();
+            GenerationSession session = prepareSession(chapterId, aiSettings, warnings);
+            StringBuilder draftBuilder = new StringBuilder();
 
             // 续写模式：预填已有内容
             String existingDraft = "";
@@ -183,7 +178,7 @@ public class GenerationService {
             } catch (IOException ignored) {
                 // Ignore secondary failures while reporting the original error.
             }
-            emitter.completeWithError(exception);
+            emitter.complete();
         }
     }
 
@@ -257,7 +252,7 @@ public class GenerationService {
                 ));
             } catch (IOException ignored) {
             }
-            emitter.completeWithError(e);
+            emitter.complete();
         }
     }
 
@@ -284,13 +279,7 @@ public class GenerationService {
     private List<Map<String, String>> parseReviewIssues(String raw) {
         List<Map<String, String>> result = new ArrayList<>();
         try {
-            String json = raw;
-            int start = raw.indexOf('[');
-            int end = raw.lastIndexOf(']');
-            if (start >= 0 && end > start) {
-                json = raw.substring(start, end + 1);
-            }
-            var array = objectMapper.readTree(json);
+            var array = aiJsonRepairService.readTree(raw);
             for (var node : array) {
                 String orig = node.path("original").asText("").trim();
                 String desc = node.path("description").asText("").trim();
@@ -384,11 +373,7 @@ public class GenerationService {
     }
 
     public boolean isRemoteModelReady(AiSettings settings) {
-        return settings.enabled()
-            && !"rule-based".equalsIgnoreCase(settings.provider())
-            && !text(settings.baseUrl()).isBlank()
-            && !text(settings.apiKey()).isBlank()
-            && !text(settings.model()).isBlank();
+        return aiGatewayService.isRemoteModelReady(settings);
     }
 
     public String completeWithPrompts(Project project, String systemPrompt, String userPrompt)
@@ -418,12 +403,11 @@ public class GenerationService {
         try {
             long started = System.currentTimeMillis();
             AiCompletionOptions probeOptions = AiCompletionOptions.connectionProbe();
-            ContentWithUsage probeResult = sendChatCompletion(
+            AiGatewayService.CompletionResult probeResult = aiGatewayService.complete(
                 normalized,
                 "",
                 "OK",
-                probeOptions,
-                false
+                probeOptions
             );
             String content = probeResult.content();
             long elapsed = System.currentTimeMillis() - started;
@@ -450,7 +434,13 @@ public class GenerationService {
     }
 
     private GenerationSession prepareSession(String chapterId, AiSettings aiSettings) {
-        Project project = normalizer.normalize(projectStore.loadActiveProject().project());
+        return prepareSession(chapterId, aiSettings, new ArrayList<>());
+    }
+
+    private GenerationSession prepareSession(String chapterId, AiSettings aiSettings, List<String> warnings) {
+        ProjectEnvelope envelope = projectStore.loadActiveProject();
+        String bookId = envelope.bookId();
+        Project project = normalizer.normalize(envelope.project());
         if (aiSettings != null) {
             project = normalizer.withTransientAiSettings(project, aiSettings);
         }
@@ -461,6 +451,11 @@ public class GenerationService {
 
         GenerationContext context = promptBuilder.resolveContext(project, chapterId);
         String prompt = promptBuilder.buildPrompt(project, context);
+        PromptAugmentation augmentation = promptContextAugmenter.augment(bookId, project, context);
+        if (!augmentation.text().isBlank()) {
+            prompt = prompt + "\n" + augmentation.text();
+        }
+        warnings.addAll(augmentation.warnings());
         return new GenerationSession(project, context, prompt);
     }
 
@@ -585,18 +580,11 @@ public class GenerationService {
                 return project;
             }
 
-            String json = raw;
-            int start = raw.indexOf('{');
-            int end = raw.lastIndexOf('}');
-            if (start >= 0 && end > start) {
-                json = raw.substring(start, end + 1);
-            }
-
             String title = "";
             String summary = "";
             String purpose = "";
             try {
-                var node = objectMapper.readTree(json);
+                var node = aiJsonRepairService.readTree(raw);
                 title = node.path("title").asText("").trim();
                 summary = node.path("summary").asText("").trim();
                 purpose = node.path("purpose").asText("").trim();
@@ -689,7 +677,7 @@ public class GenerationService {
                     session.lastCompletionTokens = streamResult.completionTokens();
                     session.lastTotalTokens = streamResult.totalTokens();
                     if (!draftBuilder.isEmpty()) {
-                        return "openai-compatible-stream";
+                        return aiGatewayService.providerLabel(session.project.aiSettings(), true);
                     }
                 } else {
                     ContentWithUsage result = callRemoteModel(session.project, prompt, "", null);
@@ -698,7 +686,7 @@ public class GenerationService {
                     session.lastCompletionTokens = result.completionTokens();
                     session.lastTotalTokens = result.totalTokens();
                     if (!draftBuilder.isEmpty()) {
-                        return "openai-compatible";
+                        return aiGatewayService.providerLabel(session.project.aiSettings(), false);
                     }
                 }
             } catch (GenerationCancelledException cancelledException) {
@@ -729,7 +717,7 @@ public class GenerationService {
         boolean strictOutline = project.meta().strictMode();
         ComplianceReport compliance = complianceChecker.evaluate(context, sanitizedDraft, strictOutline);
 
-        if (project.meta().strictMode() && !compliance.passed() && provider.startsWith("openai-compatible")) {
+        if (project.meta().strictMode() && !compliance.passed() && !provider.startsWith("rule-based")) {
             try {
                 String retryInstruction = promptBuilder.buildRepairInstruction(compliance);
                 StringBuilder retryBuilder = new StringBuilder();
@@ -852,7 +840,6 @@ public class GenerationService {
         AiCompletionOptions options
     ) throws IOException, InterruptedException {
         AiSettings settings = project.aiSettings();
-        AiCompletionOptions resolved = resolveOptions(settings, options);
 
         if (onDelta != null) {
             StringBuilder builder = new StringBuilder();
@@ -863,51 +850,8 @@ public class GenerationService {
             return new ContentWithUsage(builder.toString(), streamResult.promptTokens(), streamResult.completionTokens(), streamResult.totalTokens());
         }
 
-        return sendChatCompletion(settings, systemPrompt, userPrompt, resolved, true);
-    }
-
-    private ContentWithUsage sendChatCompletion(
-        AiSettings settings,
-        String systemPrompt,
-        String userPrompt,
-        AiCompletionOptions options,
-        boolean allowRetryWithoutJsonMode
-    ) throws IOException, InterruptedException {
-        URI endpoint = chatCompletionsEndpoint(settings);
-
-        HttpResponse<String> response;
-        if (options.connectivityProbe()) {
-            response = postJson(
-                endpoint,
-                settings.apiKey(),
-                buildMinimalChatPayload(settings, systemPrompt, userPrompt, options),
-                options.timeoutSeconds()
-            );
-        } else {
-            Map<String, Object> payload = buildChatPayload(settings, systemPrompt, userPrompt, options, false);
-            response = postJson(endpoint, settings.apiKey(), payload, options.timeoutSeconds());
-        }
-        if (!options.connectivityProbe() && response.statusCode() >= 400 && options.jsonObjectMode() && allowRetryWithoutJsonMode) {
-            Map<String, Object> fallbackPayload = buildChatPayload(
-                settings,
-                systemPrompt,
-                userPrompt,
-                new AiCompletionOptions(options.temperature(), options.maxTokens(), options.timeoutSeconds(), false),
-                false
-            );
-            response = postJson(endpoint, settings.apiKey(), fallbackPayload, options.timeoutSeconds());
-        }
-        if (!options.connectivityProbe() && response.statusCode() >= 400) {
-            Map<String, Object> minimalPayload = buildMinimalChatPayload(settings, systemPrompt, userPrompt, options);
-            response = postJson(endpoint, settings.apiKey(), minimalPayload, options.timeoutSeconds());
-        }
-        if (response.statusCode() >= 400) {
-            throw new IOException("Remote API error " + response.statusCode() + ": " + readErrorMessage(response.body()));
-        }
-        if (options.connectivityProbe()) {
-            return new ContentWithUsage(readConnectivityTestContent(response.body()), 0, 0, 0);
-        }
-        return readContentFromChatCompletion(response.body());
+        AiGatewayService.CompletionResult result = aiGatewayService.complete(settings, systemPrompt, userPrompt, options);
+        return new ContentWithUsage(result.content(), result.promptTokens(), result.completionTokens(), result.totalTokens());
     }
 
     private String summarizeConnectivityTest(String raw) {
@@ -924,114 +868,6 @@ public class GenerationService {
         return trimmed;
     }
 
-    private String readConnectivityTestContent(String responseBody) throws JsonProcessingException {
-        JsonNode root = objectMapper.readTree(responseBody);
-        JsonNode choice = root.path("choices").path(0);
-        JsonNode message = choice.path("message");
-
-        String content = readTextualOrParts(message.path("content"));
-        if (!content.isBlank()) {
-            return content;
-        }
-
-        String reasoning = message.path("reasoning_content").asText("");
-        if (!reasoning.isBlank()) {
-            if (reasoning.matches("(?is).*\\bOK\\b.*")) {
-                return "OK";
-            }
-            return "OK";
-        }
-
-        int completionTokens = root.path("usage").path("completion_tokens").asInt(0);
-        int totalTokens = root.path("usage").path("total_tokens").asInt(0);
-        String finishReason = choice.path("finish_reason").asText("");
-        if (completionTokens > 0 || totalTokens > 0 || "stop".equals(finishReason) || "length".equals(finishReason)) {
-            return "OK";
-        }
-
-        return "";
-    }
-
-    private Map<String, Object> buildChatPayload(
-        AiSettings settings,
-        String systemPrompt,
-        String userPrompt,
-        AiCompletionOptions options,
-        boolean stream
-    ) {
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("model", settings.model());
-        payload.put("temperature", options.temperature());
-        payload.put("max_tokens", options.effectiveMaxTokens());
-        payload.put("stream", stream);
-        payload.put("messages", buildMessages(systemPrompt, userPrompt));
-        if (options.jsonObjectMode()) {
-            payload.put("response_format", Map.of("type", "json_object"));
-        }
-        return payload;
-    }
-
-    /** 部分国内网关不支持 response_format / stop 等扩展参数，400 时回退 */
-    private Map<String, Object> buildMinimalChatPayload(
-        AiSettings settings,
-        String systemPrompt,
-        String userPrompt,
-        AiCompletionOptions options
-    ) {
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("model", settings.model());
-        payload.put("temperature", options.temperature());
-        payload.put("max_tokens", options.effectiveMaxTokens());
-        payload.put("stream", false);
-        payload.put("messages", buildMessages(systemPrompt, userPrompt));
-        return payload;
-    }
-
-    private List<Map<String, String>> buildMessages(String systemPrompt, String userPrompt) {
-        List<Map<String, String>> messages = new ArrayList<>();
-        if (systemPrompt != null && !systemPrompt.isBlank()) {
-            messages.add(Map.of("role", "system", "content", systemPrompt));
-        }
-        messages.add(Map.of("role", "user", "content", userPrompt == null ? "" : userPrompt));
-        return messages;
-    }
-
-    private HttpResponse<String> postJson(
-        URI endpoint,
-        String apiKey,
-        Map<String, Object> payload,
-        int timeoutSeconds
-    ) throws IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder(endpoint)
-            .timeout(Duration.ofSeconds(timeoutSeconds))
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer " + apiKey)
-            .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload)))
-            .build();
-        return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-    }
-
-    private HttpResponse<InputStream> postStreamJson(
-        URI endpoint,
-        String apiKey,
-        Map<String, Object> payload
-    ) throws IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder(endpoint)
-            .timeout(Duration.ofSeconds(240))
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer " + apiKey)
-            .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload)))
-            .build();
-        return httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
-    }
-
-    private AiCompletionOptions resolveOptions(AiSettings settings, AiCompletionOptions options) {
-        if (options != null) {
-            return options;
-        }
-        return new AiCompletionOptions(settings.temperature(), settings.maxTokens(), 120, false);
-    }
-
     private ContentWithUsage streamRemoteModelWithSystem(
         Project project,
         String systemPrompt,
@@ -1044,71 +880,15 @@ public class GenerationService {
             return new ContentWithUsage("", 0, 0, 0);
         }
 
-        URI endpoint = chatCompletionsEndpoint(settings);
-
-        // 尝试完整 payload
-        Map<String, Object> fullPayload = new HashMap<>();
-        fullPayload.put("model", settings.model());
-        fullPayload.put("temperature", settings.temperature());
-        fullPayload.put("max_tokens", settings.maxTokens());
-        fullPayload.put("stream", true);
-        fullPayload.put("messages", List.of(
-            Map.of("role", "system", "content", systemPrompt),
-            Map.of("role", "user", "content", userPrompt)
-        ));
-
-        HttpResponse<InputStream> response = postStreamJson(endpoint, settings.apiKey(), fullPayload);
-
-        // 降级重试：如果 400，尝试最小化 payload（去掉 temperature/max_tokens）
-        if (response.statusCode() >= 400) {
-            response.body().close();
-            Map<String, Object> minimalPayload = new HashMap<>();
-            minimalPayload.put("model", settings.model());
-            minimalPayload.put("stream", true);
-            minimalPayload.put("messages", List.of(
-                Map.of("role", "system", "content", systemPrompt),
-                Map.of("role", "user", "content", userPrompt)
-            ));
-            response = postStreamJson(endpoint, settings.apiKey(), minimalPayload);
-        }
-
-        if (response.statusCode() >= 400) {
-            String errorBody = new String(response.body().readAllBytes(), StandardCharsets.UTF_8);
-            throw new IOException("Remote API error " + response.statusCode() + ": " + readErrorMessage(errorBody));
-        }
-
-        int promptTokens = 0;
-        int completionTokens = 0;
-        int totalTokens = 0;
-
-        try (BufferedReader reader = new BufferedReader(
-            new InputStreamReader(response.body(), StandardCharsets.UTF_8)
-        )) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                ensureNotCancelled(cancelled);
-                if (!line.startsWith("data:")) {
-                    continue;
-                }
-                String data = line.substring(5).trim();
-                if (data.isEmpty() || "[DONE]".equals(data)) {
-                    continue;
-                }
-                JsonNode root = objectMapper.readTree(data);
-                JsonNode deltaNode = root.path("choices").path(0).path("delta").path("content");
-                if (deltaNode.isTextual()) {
-                    onDelta.accept(deltaNode.asText(""));
-                }
-                JsonNode usage = root.path("usage");
-                if (!usage.isMissingNode() && !usage.isNull()) {
-                    promptTokens = usage.path("prompt_tokens").asInt(0);
-                    completionTokens = usage.path("completion_tokens").asInt(0);
-                    totalTokens = usage.path("total_tokens").asInt(0);
-                }
-            }
-        }
-
-        return new ContentWithUsage("", promptTokens, completionTokens, totalTokens);
+        AiGatewayService.CompletionResult result = aiGatewayService.stream(
+            settings,
+            systemPrompt,
+            userPrompt,
+            null,
+            onDelta,
+            () -> ensureNotCancelled(cancelled)
+        );
+        return new ContentWithUsage(result.content(), result.promptTokens(), result.completionTokens(), result.totalTokens());
     }
 
     private String buildSystemPrompt(Project project, String extraSystemInstruction) {
@@ -1124,123 +904,8 @@ public class GenerationService {
         return systemPrompt;
     }
 
-    private ContentWithUsage readContentFromChatCompletion(String responseBody) throws JsonProcessingException {
-        JsonNode root = objectMapper.readTree(responseBody);
-        JsonNode choice = root.path("choices").path(0);
-        JsonNode message = choice.path("message");
-        JsonNode usage = root.path("usage");
-        int promptTokens = usage.path("prompt_tokens").asInt(0);
-        int completionTokens = usage.path("completion_tokens").asInt(0);
-        int totalTokens = usage.path("total_tokens").asInt(0);
-
-        String content = readAssistantText(message, false);
-        if (!content.isBlank()) {
-            return new ContentWithUsage(content, promptTokens, completionTokens, totalTokens);
-        }
-
-        String legacyText = choice.path("text").asText("");
-        if (!legacyText.isBlank()) {
-            return new ContentWithUsage(legacyText, promptTokens, completionTokens, totalTokens);
-        }
-
-        String refusal = message.path("refusal").asText("");
-        if (!refusal.isBlank()) {
-            return new ContentWithUsage(refusal, promptTokens, completionTokens, totalTokens);
-        }
-
-        if (message.isMissingNode() || message.isNull()) {
-            throw new JsonProcessingException("Remote response does not contain choices[0].message.") {
-                private static final long serialVersionUID = 1L;
-            };
-        }
-
-        return new ContentWithUsage("", promptTokens, completionTokens, totalTokens);
-    }
-
-    private String readAssistantText(JsonNode message, boolean allowReasoningFallback) {
-        if (message == null || message.isMissingNode() || message.isNull()) {
-            return "";
-        }
-
-        JsonNode contentNode = message.path("content");
-        String content = readTextualOrParts(contentNode);
-        if (!content.isBlank()) {
-            return content;
-        }
-
-        if (allowReasoningFallback) {
-            String reasoning = message.path("reasoning_content").asText("");
-            if (!reasoning.isBlank()) {
-                return reasoning;
-            }
-            return readTextualOrParts(message.path("output"));
-        }
-
-        return "";
-    }
-
-    private String readTextualOrParts(JsonNode node) {
-        if (node == null || node.isMissingNode() || node.isNull()) {
-            return "";
-        }
-        if (node.isTextual()) {
-            return node.asText("");
-        }
-        if (node.isArray()) {
-            return StreamSupport.stream(node.spliterator(), false)
-                .map(part -> {
-                    String text = part.path("text").asText("");
-                    if (!text.isBlank()) {
-                        return text;
-                    }
-                    return part.path("content").asText("");
-                })
-                .filter(value -> !value.isBlank())
-                .collect(Collectors.joining());
-        }
-        if (node.isObject()) {
-            String text = node.path("text").asText("");
-            if (!text.isBlank()) {
-                return text;
-            }
-            return node.path("content").asText("");
-        }
-        return "";
-    }
-
-    private String readErrorMessage(String responseBody) {
-        String message;
-        try {
-            JsonNode root = objectMapper.readTree(responseBody);
-            String error = root.path("error").path("message").asText("");
-            if (!error.isBlank()) {
-                message = error;
-            } else {
-                message = responseBody;
-            }
-        } catch (Exception ignored) {
-            // Ignore parse errors here and fallback to raw response.
-            message = responseBody;
-        }
-        return sanitizeRemoteMessage(message);
-    }
-
     private String safeErrorMessage(Exception exception, String fallback) {
-        if (exception == null || exception.getMessage() == null || exception.getMessage().isBlank()) {
-            return fallback;
-        }
-        return sanitizeRemoteMessage(exception.getMessage());
-    }
-
-    private String sanitizeRemoteMessage(String message) {
-        String sanitized = message == null ? "" : message;
-        sanitized = sanitized.replaceAll("(?i)bearer\\s+[A-Za-z0-9._~+/=-]+", "Bearer [hidden]");
-        sanitized = sanitized.replaceAll("(?i)(api[_-]?key|key|token|authorization)\\s*[:=]\\s*[^\\s,;]+", "$1=[hidden]");
-        sanitized = sanitized.replaceAll("https?://\\S+", "[hidden-url]");
-        if (sanitized.length() > 500) {
-            return sanitized.substring(0, 500) + "...";
-        }
-        return sanitized;
+        return aiGatewayService.safeErrorMessage(exception, fallback);
     }
 
     private Project updateChapterDraft(Project project, String chapterId, String draft) {
@@ -1330,28 +995,6 @@ public class GenerationService {
 
     private String text(String value) {
         return value == null ? "" : value.trim();
-    }
-
-    private URI chatCompletionsEndpoint(AiSettings settings) {
-        return URI.create(normalizeChatCompletionsUrl(settings.baseUrl()));
-    }
-
-    private String normalizeChatCompletionsUrl(String value) {
-        String normalized = text(value);
-        if (normalized.endsWith("/")) {
-            normalized = normalized.substring(0, normalized.length() - 1);
-        }
-        String lower = normalized.toLowerCase(Locale.ROOT);
-        if (lower.endsWith("/chat/completions")) {
-            return normalized;
-        }
-        if (lower.endsWith("/responses")) {
-            return normalized.substring(0, normalized.length() - "/responses".length()) + "/chat/completions";
-        }
-        if (lower.endsWith("/v1")) {
-            return normalized + "/chat/completions";
-        }
-        return normalized + "/v1/chat/completions";
     }
 
     private record ContentWithUsage(String content, int promptTokens, int completionTokens, int totalTokens) {

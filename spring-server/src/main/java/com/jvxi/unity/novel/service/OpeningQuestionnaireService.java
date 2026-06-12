@@ -31,7 +31,6 @@ public class OpeningQuestionnaireService {
     private static final int BATCH_SIZE = 5;
     private static final int BATCH_COUNT = 3;
     private static final int CONTEXT_FIELD_LIMIT = 200;
-    private static final Pattern JSON_BLOCK = Pattern.compile("```(?:json)?\\s*([\\s\\S]*?)```", Pattern.CASE_INSENSITIVE);
     private static final Pattern QUESTION_ITEM_PATTERN = Pattern.compile(
         "\\{\\s*\"id\"\\s*:\\s*\"(q\\d{2})\"\\s*,\\s*\"title\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"\\s*,\\s*\"hint\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"\\s*,\\s*\"placeholder\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"\\s*\\}",
         Pattern.DOTALL
@@ -40,17 +39,20 @@ public class OpeningQuestionnaireService {
     private final NovelTypeCatalog novelTypeCatalog;
     private final PublishPlatformCatalog publishPlatformCatalog;
     private final GenerationService generationService;
+    private final AiJsonRepairService aiJsonRepairService;
     private final ObjectMapper objectMapper;
 
     public OpeningQuestionnaireService(
         NovelTypeCatalog novelTypeCatalog,
         PublishPlatformCatalog publishPlatformCatalog,
         GenerationService generationService,
+        AiJsonRepairService aiJsonRepairService,
         ObjectMapper objectMapper
     ) {
         this.novelTypeCatalog = novelTypeCatalog;
         this.publishPlatformCatalog = publishPlatformCatalog;
         this.generationService = generationService;
+        this.aiJsonRepairService = aiJsonRepairService;
         this.objectMapper = objectMapper;
     }
 
@@ -190,7 +192,7 @@ public class OpeningQuestionnaireService {
     }
 
     private List<OnboardingQuestion> parseQuestionsByRegex(String raw) {
-        String payload = extractJsonPayload(raw);
+        String payload = aiJsonRepairService.extractJsonPayload(raw);
         Matcher matcher = QUESTION_ITEM_PATTERN.matcher(payload);
         List<OnboardingQuestion> questions = new ArrayList<>();
         while (matcher.find()) {
@@ -239,9 +241,7 @@ public class OpeningQuestionnaireService {
     }
 
     private JsonNode locateQuestionsNode(String raw) throws JsonProcessingException {
-        String json = extractJsonPayload(raw);
-        json = normalizeJsonText(json);
-        JsonNode root = objectMapper.readTree(json);
+        JsonNode root = aiJsonRepairService.readTree(raw);
         JsonNode questions = root.path("questions");
         if (questions.isArray()) {
             return questions;
@@ -250,78 +250,6 @@ public class OpeningQuestionnaireService {
             return root;
         }
         throw new ApiException(HttpStatus.BAD_GATEWAY, "AI 返回内容不是有效 JSON。");
-    }
-
-    private String extractJsonPayload(String raw) {
-        if (raw == null || raw.isBlank()) {
-            throw new ApiException(HttpStatus.BAD_GATEWAY, "AI 未返回内容。");
-        }
-        String trimmed = sanitizeRaw(raw);
-        Matcher matcher = JSON_BLOCK.matcher(trimmed);
-        if (matcher.find()) {
-            trimmed = matcher.group(1).trim();
-        }
-        String balanced = extractBalancedJson(trimmed, '{', '}');
-        if (balanced != null) {
-            return balanced;
-        }
-        balanced = extractBalancedJson(trimmed, '[', ']');
-        if (balanced != null) {
-            return balanced;
-        }
-        throw new ApiException(HttpStatus.BAD_GATEWAY, "AI 返回内容不是有效 JSON。");
-    }
-
-    private String normalizeJsonText(String json) {
-        return json
-            .replaceAll(",\\s*}", "}")
-            .replaceAll(",\\s*]", "]");
-    }
-
-    private String extractBalancedJson(String text, char open, char close) {
-        int start = text.indexOf(open);
-        if (start < 0) {
-            return null;
-        }
-        int depth = 0;
-        boolean inString = false;
-        boolean escaped = false;
-        for (int index = start; index < text.length(); index++) {
-            char current = text.charAt(index);
-            if (inString) {
-                if (escaped) {
-                    escaped = false;
-                } else if (current == '\\') {
-                    escaped = true;
-                } else if (current == '"') {
-                    inString = false;
-                }
-                continue;
-            }
-            if (current == '"') {
-                inString = true;
-                continue;
-            }
-            if (current == open) {
-                depth++;
-            } else if (current == close) {
-                depth--;
-                if (depth == 0) {
-                    return text.substring(start, index + 1);
-                }
-            }
-        }
-        return null;
-    }
-
-    private String sanitizeRaw(String raw) {
-        return raw
-            .replace('\uFEFF', ' ')
-            .replace('“', '"')
-            .replace('”', '"')
-            .replace('‘', '\'')
-            .replace('’', '\'')
-            .trim();
     }
 
     private String unescape(String value) {

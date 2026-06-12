@@ -2,7 +2,7 @@
 
 # 猫爪工具 - Cat Paw Tool
 
-**二进制文件分析助手 · PE 结构解析 · AI 智能分析 · 虚表地址提取**
+**二进制分析工作台 · 小说创作助手 · AI 增强分析 · Tauri 桌面客户端**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://www.oracle.com/java/)
@@ -18,43 +18,40 @@
 
 ---
 
-## 下载安装
+## 下载
 
-前往 [Releases](https://github.com/Jvxi/Unity/releases) 下载最新版本的后端开源包。
+前往 [Releases](https://github.com/Jvxi/Unity/releases) 下载最新版本。
 
-> 当前版本：**v0.2.0** · Release 提供后端开源包 ZIP 与 Windows 桌面安装包；服务器部署用本地构建出的 JAR
+> 当前版本：**v0.2.0**。Release 可提供后端开源包和 Windows 桌面安装包；服务器运行 JAR 需要在本地写入真实配置后自行构建，不作为 GitHub Release 附件发布。
 
 ---
 
 ## 功能特性
 
-### DLL 分析
-- **PE 全面解析** — DOS/PE 头、段表、16 个 Data Directory 全覆盖
-- **多策略虚表检测** — RTTI 引导、连续指针扫描、导出交叉引用三种策略互补
-- **AI 智能分析** — 支持 DeepSeek 和小米 MiMo 大模型辅助确认虚表、排除误报
-- **报告导出** — 一键导出 JSON / HTML 格式分析报告
+### 二进制分析工作台
 
-### 工具集
-- **字符串提取** — 从二进制文件中提取 ASCII/Unicode 字符串，支持最小长度、编码过滤、关键词搜索
-- **十六进制查看器** — 文件十六进制 Dump，支持偏移量/长度/搜索
+- **统一文件入口**：上传一次二进制文件，在同一页面切换 PE / 虚表、字符串和 Hex 工具。
+- **PE 全面解析**：解析 DOS/PE 头、段表、Data Directory、导入导出、调试信息、TLS 等结构。
+- **多策略虚表检测**：支持 RTTI 引导、连续指针扫描、导出交叉引用等策略。
+- **世界数组优先分析**：优先识别 `GWorld`、`UWorld`、`WorldContext`、`GUObjectArray`、`GNames`、`FNamePool`、Actor/Level 相关全局数据。
+- **AI 增强分析**：AI 提示词会先分析世界数组、对象数组、名称池，再分析虚表候选和误报。
+- **字符串与 Hex**：支持 ASCII / UTF-16LE 字符串提取、关键词过滤、Hex Dump、偏移量和字节序列搜索。
+- **报告导出**：JSON / HTML 报告包含 PE 信息、虚表候选、世界数组候选、相关证据和 AI 摘要。
 
-### 用户系统
-- **注册 / 登录** — 邮箱验证码注册，昵称或邮箱登录
-- **JWT 认证** — 无状态会话，Spring Security + JWT Token
-- **路由守卫** — 未登录自动跳转登录页
-- **历史记录** — 分析历史自动保存和查看
-- **个人设置** — 头像上传、资料编辑、密码修改、主题和侧边栏设置
+### 小说助手
 
-### 即时聊天
-- **私聊 / 群聊** — 支持会话列表、未读数、群成员管理
-- **文件与图片消息** — 上传后通过静态资源地址访问
-- **消息搜索与撤回** — 支持当前会话检索和 2 分钟内撤回
+- **书库与章节工作台**：创建、切换、删除书籍，统一管理项目 JSON、章节、大纲、角色和伏笔。
+- **开书流程**：支持 8 问灵感开书、15 问开书问卷、大纲方案生成。
+- **写作引擎**：章节生成、续写、重新生成、全文审查、一键修复。
+- **知识增强**：支持记忆包、RAG 检索、上下文组装、写作指导和可选 embedding 设置。
+- **质量闭环**：合规检查、章节摘要、追读力评分、记忆沉淀、提交记录、故事事件和债务追踪。
+- **安全边界**：AI Key、接口地址和模型选择只来自前端本地设置，后端临时接收使用，不落库、不写日志。
 
-### 桌面客户端
-- **Tauri 2** 轻量桌面应用
-- 分栏式登录/注册页面，磨砂玻璃效果
-- 可折叠侧边栏导航
-- 可按需在本地构建桌面安装包
+### 用户、聊天和桌面端
+
+- **用户系统**：邮箱验证码注册、昵称或邮箱登录、JWT 认证、路由守卫、历史记录和个人设置。
+- **即时聊天**：支持私聊、群聊、会话列表、未读数、文件/图片消息、搜索和短时间撤回。
+- **Tauri 2 桌面端**：Vue 3 + Element Plus 前端，支持 Windows NSIS / MSI 安装包构建。
 
 ---
 
@@ -64,40 +61,25 @@
 
 | 依赖 | 版本 | 说明 |
 |------|------|------|
-| JDK | 21+ | 后端运行 |
-| Node.js | 18+ | 前端构建 |
+| JDK | 21+ | 后端运行与构建 |
 | Maven | 3.9+ | 后端构建 |
+| Node.js | 18+ | 前端构建 |
 | MySQL | 8.0+ | 数据库 |
 | Redis | 6.0+ | 验证码缓存 |
-| Rust | 最新 | 仅打包桌面端需要 |
+| Rust | 最新稳定版 | 仅打包桌面端需要 |
 
-### 启动后端
+### 后端
 
-后端使用 JAR 内部的 `application.yml`。仓库中的配置只能保留安全模板值，真实数据库密码、邮箱授权码和 JWT 密钥不要提交到 GitHub。
-
-本地开发或准备服务器 JAR 前，在 `spring-server/src/main/resources/application.yml` 中写入实际配置后再打包：
-
-```yaml
-spring:
-  datasource:
-    username: your-db-user
-    password: your-db-password
-  mail:
-    username: your-mail@example.com
-    password: your-mail-auth-code
-cat-tool:
-  auth:
-    jwt-secret: your-base64-256-bit-secret
-```
+仓库中的后端配置只能保存安全模板值。真实数据库密码、邮箱授权码、JWT 密钥、服务器地址和部署路径不要提交到 GitHub。
 
 ```bash
 cd spring-server
 mvn spring-boot:run
 ```
 
-后端默认运行在 `http://localhost:38765`
+后端默认监听 `http://localhost:38765`。
 
-### 启动前端
+### 前端
 
 ```bash
 cd electron-app
@@ -106,58 +88,33 @@ cp .env.example .env
 npm run dev
 ```
 
-前端默认运行在 `http://localhost:5173`
+前端默认监听 `http://localhost:5173`。
 
-### 打包桌面程序
+### 桌面端打包
 
 ```bash
 cd electron-app
 npm run tauri build
 ```
 
-### 发布打包
+### 后端 JAR 打包
 
 ```bash
 cd spring-server
 mvn clean package -DskipTests
 ```
 
-GitHub Releases 上传后端开源包和前端桌面安装包：`cat-tool-server-0.2.0.zip` 用于开源分享，包含后端源码和构建文件，不包含服务器运行用的 JAR；`cat-tool-desktop-0.2.0-windows-x64-setup.exe` 和 `cat-tool-desktop-0.2.0-windows-x64.msi` 用于 Windows 桌面端安装。服务器部署的 JAR 需要在本地写好真实配置后单独构建并上传。
-
-### Linux / 宝塔部署
-
-1. 在本地确认 `spring-server/src/main/resources/application.yml` 已写入服务器要使用的真实配置。
-2. 执行 `mvn clean package -DskipTests` 生成服务器运行用的 JAR。
-3. 将 `spring-server/target/cat-tool-0.2.0.jar` 上传到宝塔站点目录，例如 `/www/wwwroot/cat-tool/`。
-4. 在宝塔 Java 项目或进程守护中运行：
-
-```bash
-java -jar /www/wwwroot/cat-tool/cat-tool-0.2.0.jar
-```
-
-默认端口：`38765`。如需 Nginx 反向代理，将站点代理到 `http://127.0.0.1:38765`。
+生成的 `spring-server/target/cat-tool-0.2.0.jar` 用于服务器部署。该 JAR 可能包含本地写入的真实运行配置，不要提交仓库，不要上传到 GitHub Release。
 
 ---
 
-## 支持的 AI 模型
-
-| 提供商 | 模型 | 说明 |
-|--------|------|------|
-| DeepSeek | `deepseek-v4-flash` | 轻量快速，推荐日常使用 |
-| DeepSeek | `deepseek-v4-pro` | 专业版，能力最强 |
-| 小米 MiMo | `MiMo-V2.5` | 主模型，通用对话 |
-| 小米 MiMo | `mimo-v2.5-pro` | 专业版 |
-| 小米 MiMo | `MiMo-V2-Flash` | 轻量快速版 |
-
----
-
-## API 接口
+## API 概览
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | `GET` | `/api/health` | 健康检查 |
 | `GET` | `/api/providers` | 获取 AI 提供商和模型列表 |
-| `POST` | `/api/analyze` | 上传 DLL 文件进行分析 |
+| `POST` | `/api/analyze` | 上传二进制文件进行 PE / 虚表 / 世界数组分析 |
 | `POST` | `/api/tools/strings` | 字符串提取 |
 | `POST` | `/api/tools/hex` | 十六进制查看 |
 | `POST` | `/api/tools/export/json` | 导出 JSON 报告 |
@@ -165,7 +122,10 @@ java -jar /www/wwwroot/cat-tool/cat-tool-0.2.0.jar
 | `POST` | `/api/auth/login` | 用户登录 |
 | `POST` | `/api/auth/register` | 用户注册 |
 | `POST` | `/api/auth/send-code` | 发送邮箱验证码 |
-| `POST` | `/api/user/avatar` | 上传头像 |
+| `GET` | `/api/novels/library` | 小说书库 |
+| `PUT` | `/api/novels/project` | 保存小说工程 |
+| `POST` | `/api/novels/chapters/{chapterId}/generate` | 章节生成 |
+| `POST` | `/api/novels/rag/{bookId}/search` | 小说 RAG 搜索 |
 | `GET` | `/api/chat/sessions` | 聊天会话 |
 | `POST` | `/api/chat/upload` | 聊天文件上传 |
 
@@ -173,55 +133,41 @@ java -jar /www/wwwroot/cat-tool/cat-tool-0.2.0.jar
 
 ## 项目结构
 
-```
+```text
 Unity/
 ├── spring-server/                    # Spring Boot 后端
 │   ├── pom.xml
-│   ├── src/main/resources/application.yml # JAR 内部配置模板，提交前不要写入真实密钥
 │   └── src/main/java/com/jvxi/unity/
 │       ├── controller/               # REST API
-│       ├── service/
-│       │   ├── pe/                   # PE 解析器
-│       │   ├── VtableDetectorService # 虚表检测
-│       │   ├── DeepSeekService       # AI 集成
-│       │   ├── StringExtractService  # 字符串提取
-│       │   ├── HexViewService        # 十六进制查看
-│       │   └── ReportExportService   # 报告导出
-│       └── model/                    # 数据模型
-│
+│       ├── model/                    # 数据模型
+│       ├── novel/                    # 小说助手模块
+│       └── service/                  # PE、虚表、AI、报告、工具服务
 ├── electron-app/                     # Tauri + Vue 3 前端
 │   ├── package.json
-│   ├── src-tauri/                    # Tauri Rust 源码
+│   ├── src-tauri/                    # Tauri Rust 配置与资源
 │   └── src/
-│       ├── views/                    # 页面视图
+│       ├── api/                      # API 调用封装
 │       ├── components/               # 通用组件
-│       ├── api/client.ts             # API 调用封装
-│       ├── stores/                   # Pinia 状态管理
-│       └── router/index.ts           # Vue Router 路由
-│
-├── LICENSE                           # MIT License
+│       ├── stores/                   # Pinia 状态
+│       ├── router/                   # Vue Router
+│       └── views/                    # 页面视图
+├── RELEASES.md
+├── LICENSE
 └── README.md
 ```
 
 ---
 
-## 技术栈
-
-| 层级 | 技术 |
-|------|------|
-| 后端 | Java 21 / Spring Boot 3.2 / Spring Security / JWT / Maven |
-| 前端 | Vue 3 / TypeScript / Element Plus / Vite |
-| 桌面 | Tauri 2 / Rust |
-| 数据库 | MySQL 8 / Redis |
-| AI | DeepSeek / 小米 MiMo |
-
----
-
 ## 配置安全
 
-以下文件不会推送到仓库：`.env`、`electron-app/.env.*`、`spring-server/src/main/resources/application-local.yml`、日志、上传文件和打包产物。
+以下内容不得提交或上传到 Release：
 
-后端使用 JAR 内部的 `spring-server/src/main/resources/application.yml`。仓库中的该文件只能提交安全模板值；需要部署到服务器时，在本地写入真实数据库、邮箱和 JWT 配置后重新打包 JAR，再上传给服务器使用。真实配置不要提交。
+- 真实服务器地址、部署路径、公网 IP。
+- 数据库密码、Redis 密码、邮箱授权码、JWT 密钥、AI Key。
+- `electron-app/.env`、本地 `application-local.yml`、上传目录、日志目录、构建产物。
+- 服务器运行 JAR、带真实配置的压缩包。
+
+当前仓库通过 `.gitignore` 和本地 `skip-worktree` 保护真实配置。提交前仍应检查 `git diff --cached`，确认没有敏感信息。
 
 ---
 

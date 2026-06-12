@@ -12,16 +12,24 @@
       </div>
 
       <div class="book-list">
-        <button
-          v-for="book in store.books"
-          :key="book.id"
-          class="book-row"
-          :class="{ active: book.id === store.activeBookId }"
-          @click="store.switchBook(book.id)"
-        >
-          <span class="book-title">{{ book.title || "未命名作品" }}</span>
-          <span class="book-meta">{{ book.genre || "未设定题材" }} · {{ book.chapterCount }} 章</span>
-        </button>
+        <div v-for="book in store.books" :key="book.id" class="book-row-wrap" :class="{ active: book.id === store.activeBookId }">
+          <button class="book-row" @click="store.switchBook(book.id)">
+            <span class="book-title">{{ book.title || "未命名作品" }}</span>
+            <span class="book-meta">{{ book.genre || "未设定题材" }} · {{ book.chapterCount }} 章</span>
+          </button>
+          <el-tooltip content="删除书籍" placement="right">
+            <el-button
+              class="book-delete"
+              text
+              circle
+              type="danger"
+              :disabled="store.loading"
+              @click.stop="handleDeleteBook(book)"
+            >
+              <el-icon><Delete /></el-icon>
+            </el-button>
+          </el-tooltip>
+        </div>
         <el-empty v-if="!store.books.length" description="暂无书籍" :image-size="70" />
       </div>
 
@@ -332,6 +340,77 @@
                 <el-button @click="loadQualityPanels">刷新质量数据</el-button>
               </div>
             </div>
+
+            <div class="form-panel">
+              <div class="section-title">
+                <el-icon><Memo /></el-icon>
+                <span>故事合同</span>
+              </div>
+              <div class="inline-actions">
+                <el-button :loading="contractLoading" @click="handleGenerateMasterContract">主设定</el-button>
+                <el-button :disabled="!currentChapter" :loading="contractLoading" @click="handleGenerateChapterContract">章节合同</el-button>
+                <el-button :disabled="!currentChapter" :loading="contractLoading" @click="handleGenerateReviewContract">审查合同</el-button>
+              </div>
+              <div class="contract-stack">
+                <div v-if="storyContracts.master" class="contract-summary">
+                  <div class="contract-head">
+                    <strong>主设定</strong>
+                    <el-tag size="small">{{ contractMetaLabel(storyContracts.master) }}</el-tag>
+                  </div>
+                  <dl class="contract-kv">
+                    <template v-for="item in masterContractSummary" :key="item.label">
+                      <dt>{{ item.label }}</dt>
+                      <dd>{{ item.value }}</dd>
+                    </template>
+                  </dl>
+                </div>
+                <div v-if="storyContracts.chapter" class="contract-summary">
+                  <div class="contract-head">
+                    <strong>章节合同</strong>
+                    <el-tag size="small">{{ contractMetaLabel(storyContracts.chapter) }}</el-tag>
+                  </div>
+                  <dl class="contract-kv">
+                    <template v-for="item in chapterContractSummary" :key="item.label">
+                      <dt>{{ item.label }}</dt>
+                      <dd>{{ item.value }}</dd>
+                    </template>
+                  </dl>
+                </div>
+                <div v-if="storyContracts.review" class="contract-summary">
+                  <div class="contract-head">
+                    <strong>审查合同</strong>
+                    <el-tag size="small">{{ contractMetaLabel(storyContracts.review) }}</el-tag>
+                  </div>
+                  <dl class="contract-kv">
+                    <template v-for="item in reviewContractSummary" :key="item.label">
+                      <dt>{{ item.label }}</dt>
+                      <dd>{{ item.value }}</dd>
+                    </template>
+                  </dl>
+                </div>
+                <el-empty v-if="!hasStoryContracts" description="暂无故事合同" :image-size="70" />
+              </div>
+              <el-collapse v-if="hasStoryContracts" class="raw-json-collapse">
+                <el-collapse-item title="原始 JSON" name="raw">
+                  <pre class="json-preview">{{ storyContractText }}</pre>
+                </el-collapse-item>
+              </el-collapse>
+            </div>
+
+            <div class="form-panel">
+              <div class="section-title">
+                <el-icon><Tickets /></el-icon>
+                <span>追读债务</span>
+              </div>
+              <div class="debt-list">
+                <div v-for="debt in chaseDebts" :key="String(debt.id || debt.debtId || debt.subject)" class="debt-item">
+                  <strong>{{ debt.subject || debt.debtType || "未命名债务" }}</strong>
+                  <span>紧急度 {{ debt.urgency ?? "-" }} · 第 {{ debt.createdChapter ?? "-" }} 章</span>
+                  <p>{{ debt.description }}</p>
+                </div>
+                <el-empty v-if="!chaseDebts.length" description="暂无待处理债务" :image-size="70" />
+              </div>
+            </div>
           </section>
         </el-tab-pane>
 
@@ -482,13 +561,20 @@ import {
   analyzeNovelReadingPower,
   applyOutlineProposal,
   commitNovelChapter,
+  fetchNovelDebts,
   fetchNovelCommits,
   fetchNovelContext,
   fetchNovelEvents,
+  fetchNovelChapterBrief,
   fetchNovelMemoryPack,
   fetchNovelMemoryStats,
   fetchNovelRagStats,
+  fetchNovelReviewContract,
+  fetchNovelMasterSetting,
   generateOnboarding,
+  generateNovelChapterBrief,
+  generateNovelMasterSetting,
+  generateNovelReviewContract,
   generateOutlineProposals,
   searchNovelRag,
   streamNovelChapter,
@@ -498,8 +584,10 @@ import {
 import { useNovelStore } from "@/stores/novel";
 import type {
   NovelChapterGenerationResponse,
+  NovelChaseDebt,
   NovelReviewIssue,
   NovelRagResult,
+  NovelStoryContract,
   OnboardingAnswer,
   OutlineBootstrapProposal,
 } from "@/types";
@@ -521,6 +609,13 @@ const readingPower = ref<Record<string, unknown> | null>(null);
 const readingPowerStats = ref<Record<string, unknown> | null>(null);
 const commits = ref<unknown[]>([]);
 const events = ref<unknown[]>([]);
+const chaseDebts = ref<NovelChaseDebt[]>([]);
+const storyContracts = ref<Record<string, NovelStoryContract | null>>({
+  master: null,
+  chapter: null,
+  review: null,
+});
+const contractLoading = ref(false);
 const contextPreview = ref<unknown>(null);
 const memoryStats = ref<Record<string, unknown> | null>(null);
 const ragStats = ref<Record<string, unknown> | null>(null);
@@ -581,6 +676,34 @@ const contextPreviewText = computed(() => JSON.stringify(contextPreview.value ||
 const qualitySnapshot = computed(() =>
   JSON.stringify({ readingPower: readingPower.value, readingPowerStats: readingPowerStats.value, commits: commits.value, events: events.value }, null, 2)
 );
+const storyContractText = computed(() =>
+  JSON.stringify(storyContracts.value, null, 2)
+);
+const hasStoryContracts = computed(() => Object.values(storyContracts.value).some(Boolean));
+const masterContractSummary = computed(() =>
+  summarizeContract(storyContracts.value.master, [
+    ["题材", "route.primary_genre", "route.canonical_genre"],
+    ["调性", "masterConstraints.core_tone"],
+    ["节奏", "masterConstraints.pacing_strategy"],
+    ["锁定项", "overridePolicy.locked"],
+  ])
+);
+const chapterContractSummary = computed(() =>
+  summarizeContract(storyContracts.value.chapter, [
+    ["章节重点", "overrideAllowed.chapter_focus", "chapterDirective.goal", "chapterDirective.purpose", "chapterDirective.summary"],
+    ["标题", "chapterDirective.title"],
+    ["必写点", "chapterDirective.mandatoryBeats"],
+    ["禁写项", "chapterDirective.forbiddenContent"],
+  ])
+);
+const reviewContractSummary = computed(() =>
+  summarizeContract(storyContracts.value.review, [
+    ["必查项", "mustCheck"],
+    ["阻断规则", "blockingRules"],
+    ["题材风险", "genreSpecificRisks"],
+    ["阈值", "reviewThresholds"],
+  ])
+);
 
 watch(
   () => store.sortedChapters.map((chapter) => chapter.id).join(","),
@@ -601,10 +724,19 @@ watch(
   { immediate: true }
 );
 
+watch(activeTab, (tab) => {
+  if (tab === "quality") {
+    void loadQualityPanels();
+  } else if (tab === "knowledge") {
+    void loadSideStats();
+  }
+});
+
 onMounted(async () => {
   await store.loadAll();
   selectedChapterId.value = store.sortedChapters[0]?.id || "";
   await loadSideStats();
+  await loadQualityPanels();
   if (store.project?.onboarding?.questions?.length) {
     onboardingAnswers.value = store.project.onboarding.questions.map((question) => ({
       questionId: question.id,
@@ -641,6 +773,47 @@ function importedLines(value: unknown) {
 
 function mergeLines(base: string[], extra: string[]) {
   return Array.from(new Set([...(base || []), ...extra].filter(Boolean)));
+}
+
+function pickByPath(source: unknown, path: string): unknown {
+  return path.split(".").reduce<unknown>((value, key) => {
+    if (!value || typeof value !== "object") return undefined;
+    return (value as Record<string, unknown>)[key];
+  }, source);
+}
+
+function formatContractValue(value: unknown): string {
+  if (value == null || value === "") return "";
+  if (Array.isArray(value)) {
+    return value.map((item) => formatContractValue(item)).filter(Boolean).join("，");
+  }
+  if (typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([key, item]) => {
+        const formatted = formatContractValue(item);
+        return formatted ? `${key}: ${formatted}` : "";
+      })
+      .filter(Boolean)
+      .join("；");
+  }
+  return String(value);
+}
+
+function summarizeContract(contract: NovelStoryContract | null, fields: Array<[string, ...string[]]>) {
+  if (!contract) return [];
+  return fields
+    .map(([label, ...paths]) => ({
+      label,
+      value: paths.map((path) => formatContractValue(pickByPath(contract, path))).find(Boolean) || "-",
+    }))
+    .filter((item) => item.value !== "-");
+}
+
+function contractMetaLabel(contract: NovelStoryContract | null) {
+  const meta = contract?.meta;
+  if (!meta || typeof meta !== "object") return "story-system/v1";
+  const record = meta as Record<string, unknown>;
+  return String(record.contractType || record.schemaVersion || "story-system/v1");
 }
 
 type ImportAnalysis = {
@@ -762,6 +935,26 @@ async function handleCreateBook() {
   });
   createDialogVisible.value = false;
   selectedChapterId.value = store.sortedChapters[0]?.id || "";
+}
+
+async function handleDeleteBook(book: { id: string; title?: string }) {
+  const title = book.title || "未命名作品";
+  try {
+    await ElMessageBox.confirm(`确定删除《${title}》吗？此操作不会影响其他书籍。`, "删除书籍", {
+      type: "warning",
+      confirmButtonText: "删除",
+      cancelButtonText: "取消",
+      distinguishCancelAndClose: true,
+    });
+    await store.removeBook(book.id);
+    selectedChapterId.value = store.sortedChapters[0]?.id || "";
+    await loadQualityPanels();
+    ElMessage.success("书籍已删除");
+  } catch (error: any) {
+    if (error !== "cancel" && error !== "close") {
+      ElMessage.error(error.message || "删除失败");
+    }
+  }
 }
 
 async function handleAddChapter() {
@@ -986,16 +1179,10 @@ async function handleCommitChapter() {
   await store.saveCurrent();
   try {
     const text = currentChapter.value.draft || "";
-    const lastLine = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).at(-1) || "";
     await commitNovelChapter(store.activeBookId, currentChapter.value.order, {
       chapter_text: text,
       summary_text: currentChapter.value.summary,
       embeddingSettings: store.buildEmbeddingSettings(),
-      extraction_result: {
-        chapter_meta: {
-          hook: { content: lastLine },
-        },
-      },
     });
     await loadQualityPanels();
     ElMessage.success("章节已提交");
@@ -1006,14 +1193,22 @@ async function handleCommitChapter() {
 
 async function loadQualityPanels() {
   if (!store.activeBookId) return;
-  const [rpStats, commitResult, eventResult] = await Promise.allSettled([
+  const [rpStats, commitResult, eventResult, debtResult, masterResult, chapterResult, reviewContractResult] = await Promise.allSettled([
     fetchNovelReadingPowerStatsSafe(),
     fetchNovelCommits(store.activeBookId),
     fetchNovelEvents(store.activeBookId),
+    fetchNovelDebts(store.activeBookId, 20),
+    fetchNovelMasterSetting(store.activeBookId),
+    currentChapter.value ? fetchNovelChapterBrief(store.activeBookId, currentChapter.value.order) : Promise.resolve(null),
+    currentChapter.value ? fetchNovelReviewContract(store.activeBookId, currentChapter.value.order) : Promise.resolve(null),
   ]);
   if (rpStats.status === "fulfilled") readingPowerStats.value = rpStats.value;
   if (commitResult.status === "fulfilled") commits.value = commitResult.value;
   if (eventResult.status === "fulfilled") events.value = eventResult.value;
+  if (debtResult.status === "fulfilled") chaseDebts.value = debtResult.value;
+  if (masterResult.status === "fulfilled") storyContracts.value.master = masterResult.value;
+  if (chapterResult.status === "fulfilled") storyContracts.value.chapter = chapterResult.value;
+  if (reviewContractResult.status === "fulfilled") storyContracts.value.review = reviewContractResult.value;
 }
 
 async function fetchNovelReadingPowerStatsSafe() {
@@ -1044,7 +1239,60 @@ async function loadMemoryPack() {
 
 async function handleRagSearch() {
   if (!ragQuery.value.trim() || !store.activeBookId) return;
-  ragResults.value = await searchNovelRag(store.activeBookId, ragQuery.value.trim(), 8, store.buildEmbeddingSettings());
+  try {
+    ragResults.value = await searchNovelRag(store.activeBookId, ragQuery.value.trim(), 8, store.buildEmbeddingSettings());
+  } catch (error: any) {
+    ElMessage.error(error.message || "RAG 搜索失败");
+  }
+}
+
+async function handleGenerateMasterContract() {
+  if (!store.activeBookId || !store.project) return;
+  contractLoading.value = true;
+  try {
+    storyContracts.value.master = await generateNovelMasterSetting(
+      store.activeBookId,
+      store.project.meta.premise || store.project.meta.synopsis || store.project.meta.title,
+      store.project.meta.genre
+    );
+    ElMessage.success("主设定合同已生成");
+  } catch (error: any) {
+    ElMessage.error(error.message || "主设定合同生成失败");
+  } finally {
+    contractLoading.value = false;
+  }
+}
+
+async function handleGenerateChapterContract() {
+  if (!store.activeBookId || !currentChapter.value) return;
+  contractLoading.value = true;
+  try {
+    storyContracts.value.chapter = await generateNovelChapterBrief(store.activeBookId, currentChapter.value.order, {
+      title: currentChapter.value.title,
+      summary: currentChapter.value.summary,
+      purpose: currentChapter.value.purpose,
+      mandatoryBeats: currentChapter.value.mandatoryBeats,
+      forbiddenContent: currentChapter.value.forbiddenContent,
+    });
+    ElMessage.success("章节合同已生成");
+  } catch (error: any) {
+    ElMessage.error(error.message || "章节合同生成失败");
+  } finally {
+    contractLoading.value = false;
+  }
+}
+
+async function handleGenerateReviewContract() {
+  if (!store.activeBookId || !currentChapter.value) return;
+  contractLoading.value = true;
+  try {
+    storyContracts.value.review = await generateNovelReviewContract(store.activeBookId, currentChapter.value.order);
+    ElMessage.success("审查合同已生成");
+  } catch (error: any) {
+    ElMessage.error(error.message || "审查合同生成失败");
+  } finally {
+    contractLoading.value = false;
+  }
 }
 
 async function handleImportOutline() {
@@ -1161,7 +1409,7 @@ p {
   margin: 14px 0 18px;
 }
 
-.book-row,
+.book-row-wrap,
 .chapter-row {
   width: 100%;
   border: 1px solid var(--color-border);
@@ -1174,7 +1422,35 @@ p {
   transition: border-color 0.2s var(--transition-smooth), background 0.2s var(--transition-smooth);
 }
 
-.book-row.active,
+.book-row-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px 0 10px;
+}
+
+.book-row {
+  min-width: 0;
+  padding: 10px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.book-delete {
+  justify-self: end;
+  opacity: 0.65;
+}
+
+.book-row-wrap:hover .book-delete,
+.book-delete:focus-visible {
+  opacity: 1;
+}
+
+.book-row-wrap.active,
 .chapter-row.active {
   border-color: var(--color-primary);
   background: var(--color-primary-bg);
@@ -1239,7 +1515,8 @@ p {
 .inspector-block,
 .edit-row,
 .review-entry,
-.rag-item {
+.rag-item,
+.debt-item {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-bg);
@@ -1371,6 +1648,73 @@ p {
   line-height: 1.7;
 }
 
+.contract-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.contract-summary {
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.contract-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.contract-kv {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 8px 10px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.contract-kv dt {
+  color: var(--color-text-secondary);
+}
+
+.contract-kv dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--color-text);
+  word-break: break-word;
+}
+
+.raw-json-collapse {
+  margin-top: 12px;
+}
+
+.debt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.debt-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.debt-item span {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.debt-item p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
 .review-entry {
   display: flex;
   flex-direction: column;
@@ -1434,6 +1778,24 @@ p {
   .import-grid,
   .two-cols,
   .chapter-bindings {
+    grid-template-columns: 1fr;
+  }
+  .workspace-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .toolbar-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  .workspace-tabs :deep(.el-tabs__nav-scroll) {
+    overflow-x: auto;
+  }
+  .workspace-tabs :deep(.el-tabs__nav) {
+    white-space: nowrap;
+  }
+  .contract-kv {
     grid-template-columns: 1fr;
   }
   .library-pane {

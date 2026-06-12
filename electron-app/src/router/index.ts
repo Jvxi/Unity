@@ -27,17 +27,17 @@ const router = createRouter({
         {
           path: "analysis",
           name: "analysis",
-          component: () => import("../views/DllAnalysisView.vue"),
+          component: () => import("../views/BinaryWorkbenchView.vue"),
         },
         {
           path: "strings",
           name: "strings",
-          component: () => import("../views/StringsView.vue"),
+          redirect: { path: "/analysis", query: { tool: "strings" } },
         },
         {
           path: "hex",
           name: "hex",
-          component: () => import("../views/HexView.vue"),
+          redirect: { path: "/analysis", query: { tool: "hex" } },
         },
         {
           path: "history",

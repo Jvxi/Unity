@@ -1,5 +1,11 @@
 import axios from "axios";
-import type { ApiResponse, AnalysisResult, ProviderInfo } from "@/types";
+import type {
+  ApiResponse,
+  AnalysisResult,
+  BinaryStringExtractResult,
+  HexDumpResult,
+  ProviderInfo,
+} from "@/types";
 
 const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:38765";
 
@@ -20,6 +26,38 @@ export const API_BASE = normalizeApiBaseUrl(DEFAULT_API_BASE);
 
 export function getApiBaseUrl() {
   return API_BASE;
+}
+
+export function readApiErrorMessage(error: unknown, fallback = "请求失败") {
+  if (axios.isAxiosError(error)) {
+    return readErrorPayload(error.response?.data, error.message || fallback);
+  }
+  return error instanceof Error ? error.message || fallback : fallback;
+}
+
+export function readErrorPayload(payload: unknown, fallback = "请求失败") {
+  if (!payload) return fallback;
+  if (typeof payload === "string") return payload.trim() || fallback;
+  if (typeof payload !== "object") return fallback;
+
+  const data = payload as Record<string, unknown>;
+  for (const key of ["message", "error", "detail", "title"]) {
+    const value = data[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+
+  const errors = data.errors;
+  if (Array.isArray(errors)) {
+    const first = errors.find((item) => typeof item === "string" && item.trim());
+    if (typeof first === "string") return first.trim();
+  } else if (errors && typeof errors === "object") {
+    const first = Object.values(errors as Record<string, unknown>)
+      .flatMap((value) => (Array.isArray(value) ? value : [value]))
+      .find((item) => typeof item === "string" && item.trim());
+    if (typeof first === "string") return first.trim();
+  }
+
+  return fallback;
 }
 
 export function normalizeAssetPath(url?: string | null) {
@@ -64,9 +102,10 @@ http.interceptors.response.use(
   (response) => response,
   (error) => {
     if (axios.isAxiosError(error)) {
-      const data = error.response?.data as { message?: string; error?: string } | undefined;
-      if (data?.message || data?.error) {
-        error.message = data.message || data.error || error.message;
+      const fallback = error.response ? `请求失败：${error.response.status}` : `无法连接服务器：${getApiBaseUrl()}`;
+      const message = readErrorPayload(error.response?.data, fallback);
+      if (message) {
+        error.message = message;
       } else if (!error.response) {
         error.message = `无法连接服务器：${getApiBaseUrl()}`;
       }
@@ -143,7 +182,7 @@ export async function extractStrings(
   minLength: number = 4,
   encoding: string = "all",
   keyword?: string
-) {
+): Promise<BinaryStringExtractResult> {
   const fd = new FormData();
   fd.append("file", file);
   fd.append("minLength", String(minLength));
@@ -159,7 +198,7 @@ export async function hexDump(
   offset: number = 0,
   length: number = 0,
   search?: string
-) {
+): Promise<HexDumpResult> {
   const fd = new FormData();
   fd.append("file", file);
   fd.append("offset", String(offset));

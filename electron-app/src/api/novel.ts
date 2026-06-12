@@ -1,8 +1,9 @@
-import http, { getApiBaseUrl } from "@/api/client";
+import http, { getApiBaseUrl, readApiErrorMessage, readErrorPayload } from "@/api/client";
 import type {
   NovelAiSettings,
   NovelBookSummary,
   NovelChapterGenerationResponse,
+  NovelChaseDebt,
   NovelCommitRecord,
   NovelEmbeddingSettings,
   NovelLibraryIndex,
@@ -12,6 +13,7 @@ import type {
   NovelRagResult,
   NovelReadingPower,
   NovelReviewIssue,
+  NovelStoryContract,
   NovelStoryEvent,
   NovelTypeCatalogResponse,
   OnboardingAnswer,
@@ -37,11 +39,7 @@ function authHeaders(extra?: Record<string, string>) {
 }
 
 function readBusinessError(error: unknown, fallback: string) {
-  if (typeof error === "object" && error && "response" in error) {
-    const response = (error as { response?: { data?: { message?: string; error?: string } } }).response;
-    return response?.data?.message || response?.data?.error || fallback;
-  }
-  return error instanceof Error ? error.message : fallback;
+  return readApiErrorMessage(error, fallback);
 }
 
 export async function fetchNovelLibrary(): Promise<NovelLibraryIndex> {
@@ -169,7 +167,51 @@ export async function fetchNovelReadingPowerStats(bookId: string) {
 }
 
 export async function fetchNovelDebts(bookId: string, limit = 10) {
-  const res = await http.get<unknown[]>(`/api/novels/reading-power/${encodeURIComponent(bookId)}/debts?limit=${limit}`);
+  const res = await http.get<NovelChaseDebt[]>(`/api/novels/reading-power/${encodeURIComponent(bookId)}/debts?limit=${limit}`);
+  return res.data;
+}
+
+export async function fetchNovelMasterSetting(bookId: string) {
+  const res = await http.get<NovelStoryContract>(
+    `/api/novels/story-system/${encodeURIComponent(bookId)}/master-setting`
+  );
+  return res.data;
+}
+
+export async function generateNovelMasterSetting(bookId: string, query = "", genre?: string) {
+  const res = await http.post<NovelStoryContract>(
+    `/api/novels/story-system/${encodeURIComponent(bookId)}/master-setting`,
+    { query, genre }
+  );
+  return res.data;
+}
+
+export async function fetchNovelChapterBrief(bookId: string, chapter: number) {
+  const res = await http.get<NovelStoryContract>(
+    `/api/novels/story-system/${encodeURIComponent(bookId)}/chapter/${chapter}/brief`
+  );
+  return res.data;
+}
+
+export async function generateNovelChapterBrief(bookId: string, chapter: number, directive?: Record<string, unknown>) {
+  const res = await http.post<NovelStoryContract>(
+    `/api/novels/story-system/${encodeURIComponent(bookId)}/chapter/${chapter}/brief`,
+    directive || {}
+  );
+  return res.data;
+}
+
+export async function fetchNovelReviewContract(bookId: string, chapter: number) {
+  const res = await http.get<NovelStoryContract>(
+    `/api/novels/story-system/${encodeURIComponent(bookId)}/chapter/${chapter}/review-contract`
+  );
+  return res.data;
+}
+
+export async function generateNovelReviewContract(bookId: string, chapter: number) {
+  const res = await http.post<NovelStoryContract>(
+    `/api/novels/story-system/${encodeURIComponent(bookId)}/chapter/${chapter}/review-contract`
+  );
   return res.data;
 }
 
@@ -266,8 +308,13 @@ function parseSseChunk(buffer: string) {
 
 async function readHttpErrorMessage(response: Response) {
   try {
-    const data = (await response.json()) as { message?: string; error?: string };
-    return data.message || data.error || `请求失败：${response.status}`;
+    const text = await response.text();
+    if (!text.trim()) return `请求失败：${response.status}`;
+    try {
+      return readErrorPayload(JSON.parse(text), `请求失败：${response.status}`);
+    } catch {
+      return readErrorPayload(text, `请求失败：${response.status}`);
+    }
   } catch {
     return `请求失败：${response.status}`;
   }
