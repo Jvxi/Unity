@@ -113,7 +113,15 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.history { max-width: 1000px; }
+.history {
+  width: 100%;
+  min-width: 0;
+}
+
+.history :deep(.el-card) {
+  width: 100%;
+}
+
 .card-header {
   display: flex;
   align-items: center;

@@ -569,6 +569,7 @@ import {
   fetchNovelMemoryPack,
   fetchNovelMemoryStats,
   fetchNovelRagStats,
+  fetchNovelReadingPowerStats,
   fetchNovelReviewContract,
   fetchNovelMasterSetting,
   generateOnboarding,
@@ -1213,7 +1214,6 @@ async function loadQualityPanels() {
 
 async function fetchNovelReadingPowerStatsSafe() {
   if (!store.activeBookId) return {};
-  const { fetchNovelReadingPowerStats } = await import("@/api/novel");
   return fetchNovelReadingPowerStats(store.activeBookId);
 }
 

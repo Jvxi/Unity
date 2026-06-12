@@ -1,6 +1,7 @@
 {
   "name": "cat-tool",
   "version": "0.2.0",
+  "type": "module",
   "description": "猫爪工具 - 二进制分析助手",
   "scripts": {
     "dev": "vite",
