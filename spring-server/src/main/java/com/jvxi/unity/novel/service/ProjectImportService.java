@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.regex.Pattern;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -29,15 +28,20 @@ public class ProjectImportService {
     private static final int OUTLINE_AI_INPUT = 32_000;
     private static final int CHAPTER_META_BATCH = 20;
     private static final int CHAPTER_PREVIEW_CHARS = 180;
-    private static final Pattern JSON_BLOCK = Pattern.compile("```(?:json)?\\s*([\\s\\S]*?)```", Pattern.CASE_INSENSITIVE);
 
     private static final ExecutorService IMPORT_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
 
     private final GenerationService generationService;
+    private final AiJsonRepairService aiJsonRepairService;
     private final ObjectMapper objectMapper;
 
-    public ProjectImportService(GenerationService generationService, ObjectMapper objectMapper) {
+    public ProjectImportService(
+        GenerationService generationService,
+        AiJsonRepairService aiJsonRepairService,
+        ObjectMapper objectMapper
+    ) {
         this.generationService = generationService;
+        this.aiJsonRepairService = aiJsonRepairService;
         this.objectMapper = objectMapper;
     }
 
@@ -311,15 +315,10 @@ public class ProjectImportService {
     }
 
     private BookMetaSlice parseBookMeta(String raw) {
-        String json = normalizeJsonText(extractJsonPayload(raw));
         try {
-            return toBookMetaSlice(objectMapper.readTree(json));
+            return toBookMetaSlice(aiJsonRepairService.readTree(raw));
         } catch (JsonProcessingException exception) {
-            try {
-                return toBookMetaSlice(objectMapper.readTree(repairJson(json)));
-            } catch (JsonProcessingException ignored) {
-                throw new ApiException(HttpStatus.BAD_GATEWAY, "解析书籍信息失败，请缩短大纲后重试。");
-            }
+            throw new ApiException(HttpStatus.BAD_GATEWAY, "解析书籍信息失败，请缩短大纲后重试。");
         }
     }
 
@@ -336,35 +335,23 @@ public class ProjectImportService {
     }
 
     private List<ImportedCharacter> parseCharactersOnly(String raw) {
-        String json = normalizeJsonText(extractJsonPayload(raw));
         try {
-            JsonNode root = objectMapper.readTree(json);
+            JsonNode root = aiJsonRepairService.readTree(raw);
             return parseCharacters(root.path("characters"));
         } catch (JsonProcessingException exception) {
-            try {
-                JsonNode root = objectMapper.readTree(repairJson(json));
-                return parseCharacters(root.path("characters"));
-            } catch (JsonProcessingException ignored) {
-                throw new ApiException(HttpStatus.BAD_GATEWAY, "解析角色列表失败，请缩短大纲后重试。");
-            }
+            throw new ApiException(HttpStatus.BAD_GATEWAY, "解析角色列表失败，请缩短大纲后重试。");
         }
     }
 
     private OutlineSlice parseOutlineSlice(String raw) {
-        String json = normalizeJsonText(extractJsonPayload(raw));
         try {
-            JsonNode root = objectMapper.readTree(json);
+            JsonNode root = aiJsonRepairService.readTree(raw);
             return toOutlineSlice(root);
         } catch (JsonProcessingException exception) {
-            try {
-                JsonNode root = objectMapper.readTree(repairJson(json));
-                return toOutlineSlice(root);
-            } catch (JsonProcessingException ignored) {
-                throw new ApiException(
-                    HttpStatus.BAD_GATEWAY,
-                    "解析大纲阶段失败：返回的 JSON 不完整，请缩短大纲文本后重试。"
-                );
-            }
+            throw new ApiException(
+                HttpStatus.BAD_GATEWAY,
+                "解析大纲阶段失败：返回的 JSON 不完整，请缩短大纲文本后重试。"
+            );
         }
     }
 
@@ -376,20 +363,14 @@ public class ProjectImportService {
     }
 
     private List<ImportedChapter> parseChapters(String raw) {
-        String json = normalizeJsonText(extractJsonPayload(raw));
         try {
-            JsonNode root = objectMapper.readTree(json);
+            JsonNode root = aiJsonRepairService.readTree(raw);
             return parseChapterList(root.path("chapters"));
         } catch (JsonProcessingException exception) {
-            try {
-                JsonNode root = objectMapper.readTree(repairJson(json));
-                return parseChapterList(root.path("chapters"));
-            } catch (JsonProcessingException ignored) {
-                throw new ApiException(
-                    HttpStatus.BAD_GATEWAY,
-                    "解析章节失败：返回的 JSON 不完整。请减少章节数量或缩短单章长度后重试。"
-                );
-            }
+            throw new ApiException(
+                HttpStatus.BAD_GATEWAY,
+                "解析章节失败：返回的 JSON 不完整。请减少章节数量或缩短单章长度后重试。"
+            );
         }
     }
 
@@ -555,44 +536,6 @@ public class ProjectImportService {
             return value;
         }
         return value.substring(0, max) + "\n…（已截断）";
-    }
-
-    private String extractJsonPayload(String raw) {
-        if (raw == null) {
-            return "{}";
-        }
-        var matcher = JSON_BLOCK.matcher(raw);
-        if (matcher.find()) {
-            return matcher.group(1).trim();
-        }
-        int start = raw.indexOf('{');
-        int end = raw.lastIndexOf('}');
-        if (start >= 0 && end > start) {
-            return raw.substring(start, end + 1);
-        }
-        return raw.trim();
-    }
-
-    private String normalizeJsonText(String json) {
-        return json == null ? "{}" : json.replace('\u201c', '"').replace('\u201d', '"').trim();
-    }
-
-    private String repairJson(String json) {
-        if (json == null || json.isBlank()) {
-            return "{}";
-        }
-        String repaired = json.trim();
-        if (!repaired.endsWith("}")) {
-            int lastBrace = repaired.lastIndexOf('}');
-            if (lastBrace > 0) {
-                repaired = repaired.substring(0, lastBrace + 1);
-            } else {
-                repaired = repaired + "}";
-            }
-        }
-        repaired = repaired.replaceAll(",\\s*}", "}");
-        repaired = repaired.replaceAll(",\\s*]", "]");
-        return repaired;
     }
 
     private List<String> readStringArray(JsonNode node) {

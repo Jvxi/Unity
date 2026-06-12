@@ -64,7 +64,7 @@ public class HexViewService {
      */
     public HexResult dump(byte[] data, long offset, int length, String searchHex) {
         long totalBytes = data.length;
-        int start = (int) Math.min(offset, totalBytes);
+        int start = (int) Math.min(Math.max(0, offset), totalBytes);
         int end;
 
         if (length <= 0) {

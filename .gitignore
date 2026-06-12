@@ -10,6 +10,7 @@ Thumbs.db
 desktop.ini
 
 # Java build
+.m2/
 spring-server/target/
 spring-server/*.class
 spring-server/.mvn/
@@ -54,4 +55,6 @@ dist-release/
 # Protect credentials
 spring-server/src/main/resources/application-local.yml
 spring-server/src/main/resources/application-*.local.yml
+spring-server/config/application-local.yml
+spring-server/config/application-*.local.yml
 spring-server/uploads/

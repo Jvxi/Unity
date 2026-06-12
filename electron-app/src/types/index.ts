@@ -100,7 +100,70 @@ export interface VtableInfo {
 export interface AnalysisResult {
   peInfo: PeInfo;
   vtables: VtableInfo[];
+  worldAnalysis?: WorldAnalysisResult;
   aiSummary: string;
+}
+
+export interface WorldArrayCandidate {
+  name?: string;
+  kind?: string;
+  rva: string;
+  rvaValue: number;
+  va: string;
+  vaValue: number;
+  sectionName?: string;
+  detectionMethod?: string;
+  pointerCount: number;
+  confidence: number;
+  evidence?: string[];
+  relatedStrings?: string[];
+}
+
+export interface WorldRelatedData {
+  kind?: string;
+  name?: string;
+  rva?: string;
+  rvaValue?: number;
+  va?: string;
+  vaValue?: number;
+  sectionName?: string;
+  value?: string;
+  note?: string;
+}
+
+export interface WorldAnalysisResult {
+  worldArrayCandidates: WorldArrayCandidate[];
+  relatedData: WorldRelatedData[];
+  priorityHints: string[];
+  summary?: string;
+}
+
+export interface BinaryStringEntry {
+  offset: number;
+  value: string;
+  encoding: "ascii" | "unicode" | string;
+  length: number;
+}
+
+export interface BinaryStringExtractResult {
+  strings: BinaryStringEntry[];
+  totalCount: number;
+  asciiCount: number;
+  unicodeCount: number;
+}
+
+export interface HexDumpLine {
+  offset: number;
+  hex: string;
+  ascii: string;
+}
+
+export interface HexDumpResult {
+  lines: HexDumpLine[];
+  totalBytes: number;
+  startOffset: number;
+  endOffset: number;
+  totalLines: number;
 }
 
 export interface ApiResponse<T> {
@@ -380,6 +443,23 @@ export interface NovelStoryEvent {
   subject?: string;
   chapterNumber?: number;
   description?: string;
+  [key: string]: unknown;
+}
+
+export interface NovelStoryContract {
+  meta?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export interface NovelChaseDebt {
+  id?: string;
+  debtId?: string;
+  debtType?: string;
+  subject?: string;
+  description?: string;
+  createdChapter?: number;
+  urgency?: number;
+  status?: string;
   [key: string]: unknown;
 }
 

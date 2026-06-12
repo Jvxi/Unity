@@ -3,6 +3,7 @@ package com.jvxi.unity.controller;
 import com.jvxi.unity.model.*;
 import com.jvxi.unity.service.DeepSeekService;
 import com.jvxi.unity.service.VtableDetectorService;
+import com.jvxi.unity.service.WorldArrayAnalysisService;
 import com.jvxi.unity.service.pe.PeParserAggregator;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,13 +16,16 @@ public class AnalysisController {
 
     private final PeParserAggregator peParser;
     private final VtableDetectorService vtableDetector;
+    private final WorldArrayAnalysisService worldArrayAnalysisService;
     private final DeepSeekService deepSeekService;
 
     public AnalysisController(PeParserAggregator peParser,
                               VtableDetectorService vtableDetector,
+                              WorldArrayAnalysisService worldArrayAnalysisService,
                               DeepSeekService deepSeekService) {
         this.peParser = peParser;
         this.vtableDetector = vtableDetector;
+        this.worldArrayAnalysisService = worldArrayAnalysisService;
         this.deepSeekService = deepSeekService;
     }
 
@@ -72,16 +76,20 @@ public class AnalysisController {
             // 2. 虚表检测
             List<VtableInfo> vtables = vtableDetector.detect(data, peInfo);
 
-            // 3. AI 分析（可选）
+            // 3. 世界数组和相关全局数据优先分析
+            WorldAnalysisResult worldAnalysis = worldArrayAnalysisService.analyze(data, peInfo);
+
+            // 4. AI 分析（可选）
             String aiSummary = null;
             if (apiKey != null && !apiKey.isBlank()) {
-                aiSummary = deepSeekService.analyzeWithAI(peInfo, vtables, apiKey, provider, model, apiUrl);
+                aiSummary = deepSeekService.analyzeWithAI(peInfo, vtables, worldAnalysis, apiKey, provider, model, apiUrl);
             }
 
-            // 4. 组装结果
+            // 5. 组装结果
             AnalysisResult result = new AnalysisResult();
             result.setPeInfo(peInfo);
             result.setVtables(vtables);
+            result.setWorldAnalysis(worldAnalysis);
             result.setAiSummary(aiSummary);
 
             Map<String, Object> response = new HashMap<>();

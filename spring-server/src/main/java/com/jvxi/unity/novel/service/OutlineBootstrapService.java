@@ -34,7 +34,6 @@ public class OutlineBootstrapService {
     private static final int QUESTION_COUNT = 8;
     private static final int BOOTSTRAP_BATCH_COUNT = 2;
     private static final int BOOTSTRAP_BATCH_SIZE = 4;
-    private static final Pattern JSON_BLOCK = Pattern.compile("```(?:json)?\\s*([\\s\\S]*?)```", Pattern.CASE_INSENSITIVE);
     private static final Pattern QUESTION_ITEM_PATTERN = Pattern.compile(
         "\\{\\s*\"id\"\\s*:\\s*\"(bq\\d{2})\"\\s*,\\s*\"title\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"\\s*,\\s*\"hint\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"\\s*,\\s*\"placeholder\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"\\s*\\}",
         Pattern.DOTALL
@@ -43,17 +42,20 @@ public class OutlineBootstrapService {
     private final NovelTypeCatalog novelTypeCatalog;
     private final PublishPlatformCatalog publishPlatformCatalog;
     private final GenerationService generationService;
+    private final AiJsonRepairService aiJsonRepairService;
     private final ObjectMapper objectMapper;
 
     public OutlineBootstrapService(
         NovelTypeCatalog novelTypeCatalog,
         PublishPlatformCatalog publishPlatformCatalog,
         GenerationService generationService,
+        AiJsonRepairService aiJsonRepairService,
         ObjectMapper objectMapper
     ) {
         this.novelTypeCatalog = novelTypeCatalog;
         this.publishPlatformCatalog = publishPlatformCatalog;
         this.generationService = generationService;
+        this.aiJsonRepairService = aiJsonRepairService;
         this.objectMapper = objectMapper;
     }
 
@@ -285,9 +287,7 @@ public class OutlineBootstrapService {
     }
 
     private List<OutlineBootstrapProposal> parseProposalsFromAi(String raw) throws JsonProcessingException {
-        String json = extractJsonPayload(raw);
-        json = normalizeJsonText(json);
-        JsonNode root = objectMapper.readTree(json);
+        JsonNode root = aiJsonRepairService.readTree(raw);
         JsonNode proposalsNode = root.path("proposals");
         if (!proposalsNode.isArray() || proposalsNode.size() != 3) {
             throw new ApiException(HttpStatus.BAD_GATEWAY, "AI 应返回 3 个大纲方案，请重试。");
@@ -370,7 +370,7 @@ public class OutlineBootstrapService {
     }
 
     private List<OnboardingQuestion> parseQuestionsByRegex(String raw) {
-        String payload = extractJsonPayload(raw);
+        String payload = aiJsonRepairService.extractJsonPayload(raw);
         Matcher matcher = QUESTION_ITEM_PATTERN.matcher(payload);
         List<OnboardingQuestion> questions = new ArrayList<>();
         while (matcher.find()) {
@@ -415,9 +415,7 @@ public class OutlineBootstrapService {
     }
 
     private JsonNode locateQuestionsNode(String raw) throws JsonProcessingException {
-        String json = extractJsonPayload(raw);
-        json = normalizeJsonText(json);
-        JsonNode root = objectMapper.readTree(json);
+        JsonNode root = aiJsonRepairService.readTree(raw);
         JsonNode questions = root.path("questions");
         if (questions.isArray()) {
             return questions;
@@ -498,26 +496,6 @@ public class OutlineBootstrapService {
 
     private List<String> safeLines(List<String> lines) {
         return lines == null ? List.of() : lines.stream().filter(line -> line != null && !line.isBlank()).toList();
-    }
-
-    private String extractJsonPayload(String raw) {
-        if (raw == null) {
-            return "{}";
-        }
-        Matcher matcher = JSON_BLOCK.matcher(raw);
-        if (matcher.find()) {
-            return matcher.group(1).trim();
-        }
-        int start = raw.indexOf('{');
-        int end = raw.lastIndexOf('}');
-        if (start >= 0 && end > start) {
-            return raw.substring(start, end + 1);
-        }
-        return raw.trim();
-    }
-
-    private String normalizeJsonText(String json) {
-        return json.replace('\u201c', '"').replace('\u201d', '"').replace('\u2018', '\'').replace('\u2019', '\'');
     }
 
     private String text(JsonNode node) {

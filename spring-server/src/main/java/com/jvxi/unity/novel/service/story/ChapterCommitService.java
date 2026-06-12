@@ -83,12 +83,14 @@ public class ChapterCommitService {
         // 3. 记忆投影
         try {
             String chapterText = (String) commitData.getOrDefault("chapter_text", "");
-            Map<String, Object> extractionResult = (Map<String, Object>) commitData.getOrDefault("extraction_result", Map.of());
-            if (extractionResult == null || extractionResult.isEmpty()) {
-                extractionResult = buildRuleBasedExtraction(chapterText, chapterNumber);
-            }
+            Map<String, Object> extractionResult = mergeWithRuleBasedExtraction(
+                    (Map<String, Object>) commitData.getOrDefault("extraction_result", Map.of()),
+                    chapterText,
+                    chapterNumber
+            );
             memoryService.updateFromChapterResult(bookId, chapterNumber, extractionResult);
             recordRuleBasedEvents(bookId, chapterNumber, extractionResult);
+            trackRuleBasedDebts(bookId, chapterNumber, extractionResult);
         } catch (Exception e) {
             log.error("记忆投影失败", e);
             projectionStatus.put("memory", "failed");
@@ -120,6 +122,70 @@ public class ChapterCommitService {
 
         log.info("章节提交成功: bookId={}, chapter={}, status={}", bookId, chapterNumber, entity.getStatus());
         return toModel(entity);
+    }
+
+    private Map<String, Object> mergeWithRuleBasedExtraction(
+            Map<String, Object> suppliedExtraction,
+            String chapterText,
+            int chapterNumber
+    ) {
+        Map<String, Object> fallback = buildRuleBasedExtraction(chapterText, chapterNumber);
+        if (suppliedExtraction == null || suppliedExtraction.isEmpty()) {
+            return fallback;
+        }
+
+        Map<String, Object> merged = new HashMap<>(suppliedExtraction);
+        mergeListField(merged, fallback, "state_changes");
+        mergeListField(merged, fallback, "entities_new");
+        mergeListField(merged, fallback, "relationships_new");
+        mergeChapterMeta(merged, fallback);
+        return merged;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void mergeListField(Map<String, Object> merged, Map<String, Object> fallback, String fieldName) {
+        Object suppliedValue = merged.get(fieldName);
+        if (suppliedValue instanceof List<?> suppliedList && !suppliedList.isEmpty()) {
+            return;
+        }
+        Object fallbackValue = fallback.get(fieldName);
+        if (fallbackValue instanceof List<?> fallbackList && !fallbackList.isEmpty()) {
+            merged.put(fieldName, fallbackList);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void mergeChapterMeta(Map<String, Object> merged, Map<String, Object> fallback) {
+        Map<String, Object> suppliedMeta = mutableMap(merged.get("chapter_meta"));
+        Map<String, Object> fallbackMeta = mutableMap(fallback.get("chapter_meta"));
+        if (fallbackMeta.isEmpty()) {
+            return;
+        }
+
+        Map<String, Object> suppliedHook = mutableMap(suppliedMeta.get("hook"));
+        Map<String, Object> fallbackHook = mutableMap(fallbackMeta.get("hook"));
+        if (!hasNonBlankValue(suppliedHook, "content") && hasNonBlankValue(fallbackHook, "content")) {
+            suppliedMeta.put("hook", fallbackHook);
+        }
+
+        if (!suppliedMeta.isEmpty()) {
+            merged.put("chapter_meta", suppliedMeta);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> mutableMap(Object value) {
+        if (value instanceof Map<?, ?> rawMap) {
+            Map<String, Object> result = new HashMap<>();
+            rawMap.forEach((key, mapValue) -> result.put(String.valueOf(key), mapValue));
+            return result;
+        }
+        return new HashMap<>();
+    }
+
+    private boolean hasNonBlankValue(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        return value != null && !String.valueOf(value).trim().isBlank();
     }
 
     private Map<String, Object> buildRuleBasedExtraction(String chapterText, int chapterNumber) {
@@ -196,6 +262,38 @@ public class ChapterCommitService {
                         value,
                         chapterNumber
                 ));
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void trackRuleBasedDebts(String bookId, int chapterNumber, Map<String, Object> extractionResult) {
+        Map<String, Object> chapterMeta = (Map<String, Object>) extractionResult.getOrDefault("chapter_meta", Map.of());
+        Map<String, Object> hook = (Map<String, Object>) chapterMeta.getOrDefault("hook", Map.of());
+        String hookContent = String.valueOf(hook.getOrDefault("content", "")).trim();
+        if (!hookContent.isBlank()) {
+            readingPowerService.trackDebt(
+                    bookId,
+                    "open_loop",
+                    "chapter_hook",
+                    hookContent,
+                    chapterNumber,
+                    Math.min(95, Math.max(55, hookContent.length() / 3))
+            );
+        }
+
+        List<Map<String, Object>> stateChanges = (List<Map<String, Object>>) extractionResult.getOrDefault("state_changes", List.of());
+        for (Map<String, Object> change : stateChanges) {
+            String value = String.valueOf(change.getOrDefault("new_value", "")).trim();
+            if (value.matches(".*(伏笔|承诺|约定|谜团|秘密|线索|未解|悬念).*")) {
+                readingPowerService.trackDebt(
+                        bookId,
+                        "foreshadowing",
+                        String.valueOf(change.getOrDefault("entity_id", "chapter_" + chapterNumber)),
+                        value,
+                        chapterNumber,
+                        70
+                );
             }
         }
     }

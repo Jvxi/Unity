@@ -1,5 +1,5 @@
 <template>
-  <el-container style="height: 100vh; padding: 12px; gap: 12px;">
+  <el-container class="app-shell">
     <el-aside :width="isCollapsed ? '72px' : '220px'" class="sidebar" ref="sidebarRef">
       <div class="logo" ref="logoRef">
         <div class="logo-icon">
@@ -16,7 +16,7 @@
           :key="item.path"
           :to="item.path"
           class="menu-item"
-          :class="{ active: currentRoute === item.path, 'collapsed-item': isCollapsed }"
+          :class="{ active: isMenuActive(item.path), 'collapsed-item': isCollapsed }"
         >
           <div class="menu-icon">
             <el-icon :size="18"><component :is="item.icon" /></el-icon>
@@ -24,7 +24,7 @@
           <transition name="fade-slide">
             <span v-show="!isCollapsed" class="menu-label">{{ item.label }}</span>
           </transition>
-          <div v-if="currentRoute === item.path && !isCollapsed" class="active-dot"></div>
+          <div v-if="isMenuActive(item.path) && !isCollapsed" class="active-dot"></div>
           <el-badge v-if="item.path === '/chat' && chatStore.unreadTotal > 0" :value="chatStore.unreadTotal" :max="99" class="chat-badge" />
         </router-link>
       </nav>
@@ -97,14 +97,14 @@ const glowRef = ref<HTMLElement | null>(null);
 
 const menuItems = [
   { path: "/", icon: "HomeFilled", label: "首页" },
-  { path: "/analysis", icon: "Search", label: "DLL 分析" },
-  { path: "/strings", icon: "Document", label: "字符串提取" },
-  { path: "/hex", icon: "Grid", label: "十六进制查看" },
+  { path: "/analysis", icon: "Cpu", label: "二进制工作台" },
   { path: "/history", icon: "Clock", label: "历史记录" },
   { path: "/chat", icon: "ChatDotRound", label: "聊天" },
   { path: "/novels", icon: "EditPen", label: "小说助手" },
   { path: "/settings", icon: "Setting", label: "设置" },
 ];
+
+const isMenuActive = (path: string) => currentRoute.value === path;
 
 const toggleCollapse = () => {
   const newState = !store.menuCollapsed;
@@ -113,7 +113,7 @@ const toggleCollapse = () => {
 };
 
 const animateMenuItems = () => {
-  const items = document.querySelectorAll('.menu-item');
+  const items = document.querySelectorAll(".menu-item");
   if (items.length > 0) {
     staggerIn(items, {
       x: isCollapsed.value ? -8 : 8,
@@ -121,14 +121,14 @@ const animateMenuItems = () => {
       scale: 1,
       duration: 320,
       staggerDelay: 34,
-      ease: 'out(3)',
+      ease: "out(3)",
     });
   }
 };
 
 const animatePageEnter = () => {
   nextTick(() => {
-    const cards = document.querySelectorAll('.main-content .el-card');
+    const cards = document.querySelectorAll(".main-content .el-card");
     if (cards.length > 0) {
       staggerIn(cards, {
         y: 20,
@@ -136,21 +136,21 @@ const animatePageEnter = () => {
         duration: 400,
         delay: 60,
         staggerDelay: 70,
-        ease: 'out(3)',
+        ease: "out(3)",
       });
     }
-    panelIn(document.querySelector('.header'), { y: -6, duration: 240 });
+    panelIn(document.querySelector(".header"), { y: -6, duration: 240 });
   });
 };
 
 const animateGlow = () => {
   if (glowRef.value) {
     animate(glowRef.value, {
-      top: ['0%', '100%'],
+      top: ["0%", "100%"],
       opacity: [0, 0.3, 0],
       duration: 5000,
       loop: true,
-      ease: 'inOutSine',
+      ease: "inOutSine",
     });
   }
 };
@@ -158,7 +158,7 @@ const animateGlow = () => {
 watch(() => route.path, animatePageEnter);
 watch(() => chatStore.unreadTotal, (count, oldCount) => {
   if (count > oldCount) {
-    softPulse(document.querySelector('.chat-badge'), 1.12);
+    softPulse(document.querySelector(".chat-badge"), 1.12);
   }
 });
 
@@ -170,7 +170,7 @@ onMounted(() => {
       opacity: [{ from: 0 }, { to: 1 }],
       translateY: [{ from: -12 }, { to: 0 }],
       duration: 450,
-      ease: 'outElastic(1, .75)',
+      ease: "outElastic(1, .75)",
     });
   }
 });
@@ -178,9 +178,9 @@ onMounted(() => {
 const pageTitle = computed(() => {
   switch (route.path) {
     case "/": return "首页";
-    case "/analysis": return "DLL 分析";
-    case "/strings": return "字符串提取";
-    case "/hex": return "十六进制查看";
+    case "/analysis": return "二进制工作台";
+    case "/strings":
+    case "/hex": return "二进制工作台";
     case "/history": return "历史记录";
     case "/chat": return "聊天";
     case "/novels": return "小说助手";
@@ -190,7 +190,7 @@ const pageTitle = computed(() => {
 });
 
 watch(pageTitle, () => {
-  nextTick(() => slideFlash(document.querySelector('.header .page-title'), -6));
+  nextTick(() => slideFlash(document.querySelector(".header .page-title"), -6));
 });
 
 const handleLogout = () => {
@@ -202,6 +202,12 @@ const handleLogout = () => {
 </script>
 
 <style scoped>
+.app-shell {
+  height: 100vh;
+  padding: 12px;
+  gap: 12px;
+}
+
 .sidebar {
   background: var(--color-sidebar);
   display: flex;
@@ -224,6 +230,7 @@ const handleLogout = () => {
   position: relative;
   z-index: 2;
 }
+
 .logo-icon {
   width: 34px;
   height: 34px;
@@ -235,17 +242,19 @@ const handleLogout = () => {
   flex-shrink: 0;
   overflow: hidden;
 }
+
 .logo-img {
   width: 28px;
   height: 28px;
   object-fit: cover;
 }
+
 .logo-text {
   color: #e2e8f0;
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
-  letter-spacing: 0.2px;
+  letter-spacing: 0;
 }
 
 .menu-nav {
@@ -257,6 +266,7 @@ const handleLogout = () => {
   position: relative;
   z-index: 2;
 }
+
 .menu-item {
   display: flex;
   align-items: center;
@@ -270,16 +280,19 @@ const handleLogout = () => {
   position: relative;
   overflow: hidden;
 }
+
 .menu-item:hover {
   color: #d1d5db;
   background: var(--color-sidebar-hover);
 }
+
 .menu-item.active {
   color: var(--color-primary);
   background: rgba(74,222,128,0.08);
   border-left: 3px solid var(--color-primary);
   padding-left: 11px;
 }
+
 .menu-icon {
   width: 34px;
   height: 34px;
@@ -290,15 +303,18 @@ const handleLogout = () => {
   border-radius: var(--radius-sm);
   transition: all 0.25s var(--transition-smooth);
 }
+
 .menu-item.active .menu-icon {
   background: rgba(74,222,128,0.15);
   color: var(--color-primary);
 }
+
 .menu-label {
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
 }
+
 .active-dot {
   position: absolute;
   right: 12px;
@@ -309,6 +325,7 @@ const handleLogout = () => {
   border-radius: 50%;
   background: var(--color-primary);
 }
+
 .chat-badge {
   position: absolute;
   right: 8px;
@@ -326,6 +343,7 @@ const handleLogout = () => {
   position: relative;
   z-index: 2;
 }
+
 .collapse-btn:hover {
   color: #d1d5db;
   background: var(--color-sidebar-hover);
@@ -342,10 +360,12 @@ const handleLogout = () => {
 }
 
 .main-area {
+  min-width: 0;
   border-radius: var(--radius-xl);
   overflow: hidden;
   background: var(--color-bg);
 }
+
 .header {
   height: 56px;
   display: flex;
@@ -355,31 +375,37 @@ const handleLogout = () => {
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
 }
+
 .page-title {
   font-size: 16px;
   font-weight: 600;
   color: var(--color-text);
-  letter-spacing: -0.2px;
+  letter-spacing: 0;
 }
+
 .header-right {
   display: flex;
   align-items: center;
   gap: 12px;
 }
+
 .user-info {
   display: flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
 }
+
 .username {
   font-size: 14px;
   color: var(--color-text);
 }
+
 .main-content {
+  min-width: 0;
   background: var(--color-bg);
   padding: 20px;
-  overflow-y: auto;
+  overflow: auto;
 }
 
 .page-slide-enter-active { transition: all 0.3s var(--transition-smooth); }
@@ -397,5 +423,107 @@ const handleLogout = () => {
   border-left: none;
   padding-left: 14px;
   justify-content: center;
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    flex-direction: column;
+    height: 100vh;
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .sidebar {
+    width: 100% !important;
+    height: auto;
+    min-height: 52px;
+    flex-direction: row;
+    align-items: center;
+    border-radius: var(--radius-lg);
+  }
+
+  .logo {
+    width: 48px;
+    height: 52px;
+    padding: 0 8px;
+    border-bottom: 0;
+    border-right: 1px solid rgba(255,255,255,0.05);
+    flex-shrink: 0;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .logo-text,
+  .active-dot,
+  .collapse-btn,
+  .sidebar-glow {
+    display: none;
+  }
+
+  .menu-nav {
+    min-width: 0;
+    flex: 1;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 7px 8px;
+    gap: 4px;
+    scrollbar-width: none;
+  }
+
+  .menu-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .menu-item,
+  .menu-item.active,
+  .menu-item.active.collapsed-item {
+    flex: 0 0 auto;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-left: 0;
+    min-width: 42px;
+  }
+
+  .menu-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .menu-label {
+    display: none;
+  }
+
+  .chat-badge {
+    right: 0;
+    top: 0;
+  }
+
+  .main-area {
+    flex: 1;
+    min-height: 0;
+    border-radius: var(--radius-lg);
+  }
+
+  .header {
+    height: 48px;
+    padding: 0 14px;
+  }
+
+  .page-title {
+    font-size: 15px;
+  }
+
+  .username {
+    display: none;
+  }
+
+  .main-content {
+    padding: 12px;
+  }
 }
 </style>
