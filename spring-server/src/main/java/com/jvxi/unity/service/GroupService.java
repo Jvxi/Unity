@@ -26,6 +26,8 @@ public class GroupService {
 
     @Transactional
     public Map<String, Object> createGroup(String name, Long ownerId, List<Long> memberIds) {
+        Set<Long> participantIds = new LinkedHashSet<>();
+        participantIds.add(ownerId);
         ChatGroup group = new ChatGroup();
         group.setName(name);
         group.setOwnerId(ownerId);
@@ -46,41 +48,51 @@ public class GroupService {
                 if (!memberId.equals(ownerId)) {
                     addMemberInternal(group.getId(), memberId, GroupMemberRole.MEMBER);
                     chatService.ensureGroupSession(memberId, group.getId());
+                    participantIds.add(memberId);
                 }
             }
         }
 
-        return groupToMap(group);
+        Map<String, Object> result = groupToMap(group);
+        result.put("memberIds", new ArrayList<>(participantIds));
+        return result;
     }
 
     @Transactional
-    public void dissolveGroup(Long groupId, Long userId) {
+    public List<Long> dissolveGroup(Long groupId, Long userId) {
         ChatGroup group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("群不存在"));
         if (!group.getOwnerId().equals(userId)) {
             throw new RuntimeException("只有群主可以解散群");
         }
-        memberRepository.deleteByGroupIdAndUserId(groupId, userId);
+        List<ChatGroupMember> members = memberRepository.findByGroupId(groupId);
+        List<Long> memberIds = members.stream().map(ChatGroupMember::getUserId).toList();
+        memberRepository.deleteAll(members);
+        chatService.removeAllGroupSessions(groupId);
         groupRepository.delete(group);
+        return memberIds;
     }
 
     @Transactional
-    public void addMembers(Long groupId, Long operatorId, List<Long> userIds) {
+    public List<Long> addMembers(Long groupId, Long operatorId, List<Long> userIds) {
         ChatGroupMember operator = memberRepository.findByGroupIdAndUserId(groupId, operatorId)
                 .orElseThrow(() -> new RuntimeException("您不是群成员"));
         if (operator.getRole() == GroupMemberRole.MEMBER) {
             throw new RuntimeException("只有群主或管理员可以邀请成员");
         }
+        List<Long> addedUserIds = new ArrayList<>();
         for (Long uid : userIds) {
             if (!memberRepository.existsByGroupIdAndUserId(groupId, uid)) {
                 addMemberInternal(groupId, uid, GroupMemberRole.MEMBER);
                 chatService.ensureGroupSession(uid, groupId);
+                addedUserIds.add(uid);
             }
         }
+        return addedUserIds;
     }
 
     @Transactional
-    public void removeMember(Long groupId, Long operatorId, Long targetUserId) {
+    public Long removeMember(Long groupId, Long operatorId, Long targetUserId) {
         ChatGroupMember operator = memberRepository.findByGroupIdAndUserId(groupId, operatorId)
                 .orElseThrow(() -> new RuntimeException("您不是群成员"));
         ChatGroupMember target = memberRepository.findByGroupIdAndUserId(groupId, targetUserId)
@@ -94,16 +106,20 @@ public class GroupService {
         }
 
         memberRepository.deleteByGroupIdAndUserId(groupId, targetUserId);
+        chatService.removeGroupSession(targetUserId, groupId);
+        return targetUserId;
     }
 
     @Transactional
-    public void leaveGroup(Long groupId, Long userId) {
+    public Long leaveGroup(Long groupId, Long userId) {
         ChatGroupMember member = memberRepository.findByGroupIdAndUserId(groupId, userId)
                 .orElseThrow(() -> new RuntimeException("您不是群成员"));
         if (member.getRole() == GroupMemberRole.OWNER) {
             throw new RuntimeException("群主不能退群，请先转让群主或解散群");
         }
         memberRepository.deleteByGroupIdAndUserId(groupId, userId);
+        chatService.removeGroupSession(userId, groupId);
+        return userId;
     }
 
     @Transactional
@@ -158,6 +174,13 @@ public class GroupService {
             result.add(map);
         }
         return result;
+    }
+
+    public List<Long> getGroupUserIds(Long groupId) {
+        return memberRepository.findByGroupId(groupId)
+                .stream()
+                .map(ChatGroupMember::getUserId)
+                .toList();
     }
 
     public List<Map<String, Object>> getMyGroups(Long userId) {

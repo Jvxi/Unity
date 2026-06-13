@@ -50,6 +50,8 @@ public class ChatService {
 
     @Transactional
     public ChatMessage sendGroupMessage(Long senderId, Long groupId, String content, ChatMessageType type) {
+        ensureCanSendGroupMessage(senderId, groupId);
+
         ChatMessage msg = new ChatMessage();
         msg.setSenderId(senderId);
         msg.setGroupId(groupId);
@@ -92,6 +94,8 @@ public class ChatService {
 
     @Transactional
     public ChatMessage sendGroupFileMessage(Long senderId, Long groupId, String fileUrl, String fileName, Long fileSize, ChatMessageType type) {
+        ensureCanSendGroupMessage(senderId, groupId);
+
         ChatMessage msg = new ChatMessage();
         msg.setSenderId(senderId);
         msg.setGroupId(groupId);
@@ -126,7 +130,8 @@ public class ChatService {
         return messages.stream().map(this::messageToMap).toList();
     }
 
-    public List<Map<String, Object>> getGroupHistory(Long groupId, int page, int size) {
+    public List<Map<String, Object>> getGroupHistory(Long userId, Long groupId, int page, int size) {
+        requireGroupMember(userId, groupId);
         Pageable pageable = PageRequest.of(page, size);
         List<ChatMessage> messages = messageRepository.findByGroupIdOrderByCreatedAtDesc(groupId, pageable);
         Collections.reverse(messages);
@@ -136,6 +141,7 @@ public class ChatService {
     public List<Map<String, Object>> searchMessages(Long userId, Long targetUserId, Long groupId, String keyword, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         if (groupId != null) {
+            requireGroupMember(userId, groupId);
             return messageRepository.searchGroupMessages(groupId, keyword, pageable)
                     .stream().map(this::messageToMap).toList();
         } else if (targetUserId != null) {
@@ -177,12 +183,15 @@ public class ChatService {
                 map.put("targetAvatarUrl", userInfo.get("avatarUrl"));
                 map.put("targetOnlineStatus", userInfo.get("onlineStatus"));
             } else if (s.getTargetGroupId() != null) {
+                Optional<ChatGroup> groupOptional = groupRepository.findById(s.getTargetGroupId());
+                if (groupOptional.isEmpty() || !groupMemberRepository.existsByGroupIdAndUserId(s.getTargetGroupId(), userId)) {
+                    continue;
+                }
                 map.put("type", "GROUP");
                 map.put("targetGroupId", s.getTargetGroupId());
-                groupRepository.findById(s.getTargetGroupId()).ifPresent(group -> {
-                    map.put("targetNickname", group.getName());
-                    map.put("targetAvatarUrl", group.getAvatarUrl() != null ? group.getAvatarUrl() : "");
-                });
+                ChatGroup group = groupOptional.get();
+                map.put("targetNickname", group.getName());
+                map.put("targetAvatarUrl", group.getAvatarUrl() != null ? group.getAvatarUrl() : "");
             }
 
             // 获取最后一条消息预览
@@ -208,6 +217,7 @@ public class ChatService {
         if (targetUserId != null) {
             sessionRepository.clearPrivateUnread(userId, targetUserId);
         } else if (groupId != null) {
+            requireGroupMember(userId, groupId);
             sessionRepository.clearGroupUnread(userId, groupId);
         }
     }
@@ -222,6 +232,16 @@ public class ChatService {
         session.setTargetGroupId(groupId);
         session.setUnreadCount(0);
         sessionRepository.save(session);
+    }
+
+    @Transactional
+    public void removeGroupSession(Long userId, Long groupId) {
+        sessionRepository.deleteByUserIdAndTargetGroupId(userId, groupId);
+    }
+
+    @Transactional
+    public void removeAllGroupSessions(Long groupId) {
+        sessionRepository.deleteByTargetGroupId(groupId);
     }
 
     private void upsertPrivateSession(Long userId, Long targetUserId, Long messageId) {
@@ -244,6 +264,21 @@ public class ChatService {
         }
         session.setLastMessageId(messageId);
         sessionRepository.save(session);
+    }
+
+    private ChatGroupMember requireGroupMember(Long userId, Long groupId) {
+        if (groupRepository.findById(groupId).isEmpty()) {
+            throw new RuntimeException("群不存在");
+        }
+        return groupMemberRepository.findByGroupIdAndUserId(groupId, userId)
+                .orElseThrow(() -> new RuntimeException("您不是群成员"));
+    }
+
+    private void ensureCanSendGroupMessage(Long userId, Long groupId) {
+        ChatGroupMember member = requireGroupMember(userId, groupId);
+        if (member.getMutedUntil() != null && member.getMutedUntil().isAfter(LocalDateTime.now())) {
+            throw new RuntimeException("您已被禁言");
+        }
     }
 
     private Map<String, Object> messageToMap(ChatMessage msg) {

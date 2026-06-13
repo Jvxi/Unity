@@ -17,7 +17,7 @@
           </el-badge>
           <div class="session-info">
             <div class="session-name">{{ s.type === 'GROUP' ? '[群]' : '' }}{{ s.targetNickname || '未知' }}</div>
-            <div class="session-preview">{{ s.lastMessageContent || '' }}</div>
+            <div class="session-preview">{{ formatSessionPreview(s) }}</div>
           </div>
           <div class="session-time">{{ formatTime(s.updatedAt) }}</div>
         </div>
@@ -29,10 +29,13 @@
     <div class="chat-panel">
       <template v-if="chatStore.currentSession">
         <div class="chat-header">
-          <span class="chat-title">
-            {{ chatStore.currentSession.type === 'GROUP' ? '[群] ' : '' }}{{ chatStore.currentSession.targetNickname || '未知' }}
-            <el-tag v-if="chatStore.currentSession.type === 'PRIVATE' && chatStore.currentSession.targetOnlineStatus === 'ONLINE'" size="small" type="success">在线</el-tag>
-          </span>
+          <div class="chat-title-wrap">
+            <span class="chat-title">
+              {{ chatStore.currentSession.type === 'GROUP' ? '[群] ' : '' }}{{ chatStore.currentSession.targetNickname || '未知' }}
+              <el-tag v-if="chatStore.currentSession.type === 'PRIVATE' && chatStore.currentSession.targetOnlineStatus === 'ONLINE'" size="small" type="success">在线</el-tag>
+            </span>
+            <span v-if="typingText" class="typing-hint">{{ typingText }}</span>
+          </div>
           <div class="chat-actions">
             <el-button v-if="chatStore.currentSession.type === 'GROUP'" :icon="UserFilled" size="small" @click="showMembers = !showMembers">成员</el-button>
             <el-dropdown trigger="click">
@@ -53,8 +56,11 @@
             </el-avatar>
             <div class="msg-body">
               <span class="msg-sender" v-if="chatStore.currentSession?.type === 'GROUP'">{{ msg.senderNickname }}</span>
-              <div class="msg-bubble" :class="{ 'msg-recalled': msg.recalled }">
+              <div class="msg-bubble" :class="{ 'msg-recalled': msg.recalled, 'msg-emoji': msg.messageType === 'EMOJI' }">
                 <template v-if="msg.recalled">{{ msg.content }}</template>
+                <template v-else-if="msg.messageType === 'EMOJI'">
+                  <span class="emoji-message">{{ msg.content }}</span>
+                </template>
                 <template v-else-if="msg.messageType === 'IMAGE'">
                   <el-image :src="assetUrl(msg.fileUrl)" :preview-src-list="[assetUrl(msg.fileUrl)]" style="max-width:200px;max-height:200px;border-radius:8px" />
                 </template>
@@ -73,6 +79,26 @@
         </div>
         <div class="input-area">
           <div class="input-toolbar">
+            <el-popover v-model:visible="emojiPanelVisible" placement="top-start" trigger="click" width="320" popper-class="emoji-popover">
+              <template #reference>
+                <el-button :icon="ChatRound" circle size="small" title="表情包" />
+              </template>
+              <div class="emoji-picker">
+                <div class="emoji-section-title">常用表情</div>
+                <div class="emoji-grid">
+                  <button v-for="item in emojiItems" :key="item.label" class="emoji-option" type="button" :title="item.label" @click="insertEmoji(item.value)">
+                    {{ item.value }}
+                  </button>
+                </div>
+                <div class="emoji-section-title">大表情</div>
+                <div class="sticker-grid">
+                  <button v-for="item in stickerItems" :key="item.label" class="sticker-option" type="button" @click="sendEmoji(item.value)">
+                    <span>{{ item.value }}</span>
+                    <small>{{ item.label }}</small>
+                  </button>
+                </div>
+              </div>
+            </el-popover>
             <el-upload :show-file-list="false" :before-upload="handleFileUpload" accept="image/*">
               <el-button :icon="Picture" circle size="small" title="发送图片" />
             </el-upload>
@@ -82,7 +108,7 @@
           </div>
           <div class="input-row">
             <el-input v-model="inputText" type="textarea" :rows="2" placeholder="输入消息..."
-                      @keydown.enter.exact.prevent="sendMessage" resize="none" />
+                      @input="notifyTyping" @keydown.enter.exact.prevent="sendMessage" resize="none" />
             <el-button type="primary" @click="sendMessage" :disabled="!inputText.trim()">发送</el-button>
           </div>
         </div>
@@ -217,7 +243,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick, watch, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, UserFilled, MoreFilled, Picture, Paperclip, Document, ChatDotRound, Check } from '@element-plus/icons-vue'
+import { Plus, UserFilled, MoreFilled, Picture, Paperclip, Document, ChatDotRound, ChatRound, Check } from '@element-plus/icons-vue'
 import { useChatStore } from '@/stores/chat'
 import { useAuthStore } from '@/stores/auth'
 import { resolveAssetUrl } from '@/api/client'
@@ -238,6 +264,7 @@ const showMembers = ref(false)
 const showNewChat = ref(false)
 const showGroupManage = ref(false)
 const showSearchDialog = ref(false)
+const emojiPanelVisible = ref(false)
 const newChatTab = ref('private')
 
 // New chat - private
@@ -258,12 +285,36 @@ const messageSearchResults = ref<ChatMessage[]>([])
 const messageSearching = ref(false)
 const messageSearchDone = ref(false)
 
+const emojiItems = [
+  { label: '开心', value: '😊' },
+  { label: '大笑', value: '😄' },
+  { label: '赞', value: '👍' },
+  { label: '鼓掌', value: '👏' },
+  { label: '握手', value: '🤝' },
+  { label: '思考', value: '🤔' },
+  { label: '收到', value: '👌' },
+  { label: '火', value: '🔥' },
+  { label: '爱心', value: '❤️' },
+  { label: '星星', value: '✨' },
+  { label: '难过', value: '😢' },
+  { label: '惊讶', value: '😮' },
+]
+
+const stickerItems = [
+  { label: '开心一下', value: '😄✨' },
+  { label: '干得漂亮', value: '👍🔥' },
+  { label: '收到', value: '👌 收到' },
+  { label: '稍等', value: '🤔 稍等一下' },
+  { label: '辛苦了', value: '👏 辛苦了' },
+  { label: '感谢', value: '🙏 谢谢' },
+]
+
 const filteredSessions = computed(() => {
   const keyword = searchKey.value.trim().toLowerCase()
   if (!keyword) return chatStore.sessions
   return chatStore.sessions.filter((session) => {
     const name = session.targetNickname?.toLowerCase() || ''
-    const preview = session.lastMessageContent?.toLowerCase() || ''
+    const preview = formatSessionPreview(session).toLowerCase()
     return name.includes(keyword) || preview.includes(keyword)
   })
 })
@@ -272,6 +323,19 @@ const isOwner = computed(() => {
   if (!chatStore.currentSession?.targetGroupId) return false
   const me = chatStore.groupMembers.find(m => m.userId === myId.value)
   return me?.role === 'OWNER'
+})
+
+const typingText = computed(() => {
+  const session = chatStore.currentSession
+  if (!session || chatStore.typingUserIds.length === 0) return ''
+  if (session.type === 'PRIVATE' && session.targetUserId && chatStore.typingUserIds.includes(session.targetUserId)) {
+    return '对方正在输入...'
+  }
+  if (session.type === 'GROUP') {
+    const member = chatStore.groupMembers.find(item => chatStore.typingUserIds.includes(item.userId))
+    return member ? `${member.nickname || '成员'} 正在输入...` : ''
+  }
+  return ''
 })
 
 function isMuted(m: any) {
@@ -299,7 +363,13 @@ function formatSize(bytes?: number) {
   return (bytes / 1048576).toFixed(1) + 'MB'
 }
 
+function formatSessionPreview(session: any) {
+  if (session.lastMessageType === 'EMOJI') return `[表情] ${session.lastMessageContent || ''}`.trim()
+  return session.lastMessageContent || ''
+}
+
 function messagePreview(msg: ChatMessage) {
+  if (msg.messageType === 'EMOJI') return `[表情] ${msg.content}`.trim()
   if (msg.messageType === 'IMAGE') return '[图片]'
   if (msg.messageType === 'FILE') return `[文件] ${msg.fileName || ''}`.trim()
   return msg.content
@@ -386,6 +456,35 @@ function sendMessage() {
   }
   inputText.value = ''
   softPulse(document.querySelector('.input-area .el-button--primary'))
+}
+
+let lastTypingAt = 0
+function notifyTyping() {
+  const session = chatStore.currentSession
+  if (!session) return
+  const now = Date.now()
+  if (now - lastTypingAt < 1500) return
+  lastTypingAt = now
+  chatStore.sendTyping(
+    session.type === 'PRIVATE' ? session.targetUserId : undefined,
+    session.type === 'GROUP' ? session.targetGroupId : undefined
+  )
+}
+
+function insertEmoji(value: string) {
+  inputText.value += value
+}
+
+function sendEmoji(value: string) {
+  if (!chatStore.currentSession) return
+  const s = chatStore.currentSession
+  if (s.type === 'PRIVATE' && s.targetUserId) {
+    chatStore.sendPrivateMessage(s.targetUserId, value, 'EMOJI')
+  } else if (s.type === 'GROUP' && s.targetGroupId) {
+    chatStore.sendGroupMessage(s.targetGroupId, value, 'EMOJI')
+  }
+  emojiPanelVisible.value = false
+  softPulse(document.querySelector('.input-toolbar .el-button'))
 }
 
 async function handleFileUpload(file: File) {
@@ -528,6 +627,7 @@ async function handleDissolve() {
     chatStore.messages = []
     ElMessage.success('群已解散')
     showGroupManage.value = false
+    showMembers.value = false
   } catch {}
 }
 
@@ -539,6 +639,7 @@ async function handleLeave() {
     chatStore.messages = []
     ElMessage.success('已退出群聊')
     showGroupManage.value = false
+    showMembers.value = false
   } catch {}
 }
 
@@ -613,13 +714,18 @@ watch(() => chatStore.groupMembers.length, (count, oldCount) => {
   if (showMembers.value && count !== oldCount) animateMembersPanel()
 })
 
+watch(() => chatStore.lastError, (message) => {
+  if (!message) return
+  ElMessage.error(message)
+  chatStore.clearLastError()
+})
+
 onMounted(async () => {
   animateShell()
   const token = authStore.token
   if (token) {
     chatStore.connect(token)
-    await chatStore.refreshSessions()
-    await chatStore.loadGroups()
+    await chatStore.refreshChatState()
     animateSessions()
   }
 })
@@ -645,7 +751,9 @@ onUnmounted(() => {
 
 .chat-panel { flex: 1; display: flex; flex-direction: column; }
 .chat-header { height: 48px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--color-border); }
+.chat-title-wrap { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .chat-title { font-size: 14px; font-weight: 600; color: var(--color-text); display: flex; align-items: center; gap: 8px; }
+.typing-hint { color: var(--color-text-secondary); font-size: 11px; line-height: 1.2; }
 .chat-actions { display: flex; gap: 6px; }
 
 .messages-area { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
@@ -658,6 +766,8 @@ onUnmounted(() => {
 .msg-bubble { background: var(--color-bg); padding: 8px 12px; border-radius: 12px; font-size: 13px; color: var(--color-text); max-width: 400px; word-break: break-word; position: relative; line-height: 1.5; transition: transform 0.2s var(--transition-smooth), box-shadow 0.2s var(--transition-smooth); }
 .msg-bubble:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
 .msg-self .msg-bubble { background: var(--color-primary-bg); }
+.msg-emoji { padding: 8px 10px; }
+.emoji-message { font-size: 28px; line-height: 1.2; white-space: pre-wrap; }
 .msg-recalled { opacity: 0.6; font-style: italic; }
 .msg-time { font-size: 10px; color: var(--color-text-secondary); margin-top: 2px; }
 .msg-recall-btn { display: none; font-size: 11px; color: var(--color-text-secondary); cursor: pointer; margin-left: 8px; }
@@ -669,6 +779,18 @@ onUnmounted(() => {
 .input-toolbar { display: flex; gap: 4px; margin-bottom: 6px; }
 .input-row { display: flex; gap: 8px; align-items: flex-end; }
 .input-row .el-input { flex: 1; }
+
+:global(.emoji-popover) { padding: 10px; }
+.emoji-picker { display: flex; flex-direction: column; gap: 8px; }
+.emoji-section-title { color: var(--color-text-secondary); font-size: 12px; font-weight: 600; }
+.emoji-grid { display: grid; grid-template-columns: repeat(6, 36px); gap: 6px; }
+.emoji-option { width: 36px; height: 36px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface); font-size: 20px; cursor: pointer; transition: background 0.2s var(--transition-smooth), transform 0.2s var(--transition-smooth); }
+.emoji-option:hover { background: var(--color-primary-bg); transform: translateY(-1px); }
+.sticker-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.sticker-option { min-height: 52px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; transition: background 0.2s var(--transition-smooth), transform 0.2s var(--transition-smooth); }
+.sticker-option span { font-size: 20px; line-height: 1.1; }
+.sticker-option small { max-width: 100%; color: var(--color-text-secondary); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sticker-option:hover { background: var(--color-primary-bg); transform: translateY(-1px); }
 
 .empty-chat { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--color-text-secondary); }
 

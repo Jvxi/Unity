@@ -28,31 +28,28 @@ public class ChatWebSocketController {
         Long senderId = extractUserId(principal);
         if (senderId == null) return;
 
-        Long receiverId = Long.valueOf(payload.get("receiverId").toString());
-        String content = (String) payload.get("content");
-        String typeStr = payload.getOrDefault("messageType", "TEXT").toString();
-        ChatMessageType type = ChatMessageType.valueOf(typeStr);
+        try {
+            Long receiverId = Long.valueOf(payload.get("receiverId").toString());
+            String content = valueAsString(payload.get("content"));
+            String typeStr = payload.getOrDefault("messageType", "TEXT").toString();
+            ChatMessageType type = ChatMessageType.valueOf(typeStr);
 
-        ChatMessage msg;
-        if (type == ChatMessageType.IMAGE || type == ChatMessageType.FILE) {
-            String fileUrl = valueAsString(payload.getOrDefault("fileUrl", content));
-            String fileName = valueAsString(payload.get("fileName"));
-            Long fileSize = valueAsLong(payload.get("fileSize"));
-            msg = chatService.sendPrivateFileMessage(senderId, receiverId, fileUrl, fileName, fileSize, type);
-        } else {
-            msg = chatService.sendPrivateMessage(senderId, receiverId, content, type);
+            ChatMessage msg;
+            if (type == ChatMessageType.IMAGE || type == ChatMessageType.FILE) {
+                String fileUrl = valueAsString(payload.getOrDefault("fileUrl", content));
+                String fileName = valueAsString(payload.get("fileName"));
+                Long fileSize = valueAsLong(payload.get("fileSize"));
+                msg = chatService.sendPrivateFileMessage(senderId, receiverId, fileUrl, fileName, fileSize, type);
+            } else {
+                msg = chatService.sendPrivateMessage(senderId, receiverId, content, type);
+            }
+
+            Map<String, Object> response = buildMessageResponse(msg);
+            messagingTemplate.convertAndSendToUser(receiverId.toString(), "/queue/private", response);
+            messagingTemplate.convertAndSendToUser(senderId.toString(), "/queue/private", response);
+        } catch (Exception e) {
+            sendError(senderId, e.getMessage());
         }
-
-        // 构建响应
-        Map<String, Object> response = buildMessageResponse(msg);
-
-        // 发送给接收者
-        messagingTemplate.convertAndSendToUser(
-            receiverId.toString(), "/queue/private", response);
-
-        // 也发送回发送者确认
-        messagingTemplate.convertAndSendToUser(
-            senderId.toString(), "/queue/private", response);
     }
 
     @MessageMapping("/chat.group")
@@ -60,25 +57,27 @@ public class ChatWebSocketController {
         Long senderId = extractUserId(principal);
         if (senderId == null) return;
 
-        Long groupId = Long.valueOf(payload.get("groupId").toString());
-        String content = (String) payload.get("content");
-        String typeStr = payload.getOrDefault("messageType", "TEXT").toString();
-        ChatMessageType type = ChatMessageType.valueOf(typeStr);
+        try {
+            Long groupId = Long.valueOf(payload.get("groupId").toString());
+            String content = valueAsString(payload.get("content"));
+            String typeStr = payload.getOrDefault("messageType", "TEXT").toString();
+            ChatMessageType type = ChatMessageType.valueOf(typeStr);
 
-        ChatMessage msg;
-        if (type == ChatMessageType.IMAGE || type == ChatMessageType.FILE) {
-            String fileUrl = valueAsString(payload.getOrDefault("fileUrl", content));
-            String fileName = valueAsString(payload.get("fileName"));
-            Long fileSize = valueAsLong(payload.get("fileSize"));
-            msg = chatService.sendGroupFileMessage(senderId, groupId, fileUrl, fileName, fileSize, type);
-        } else {
-            msg = chatService.sendGroupMessage(senderId, groupId, content, type);
+            ChatMessage msg;
+            if (type == ChatMessageType.IMAGE || type == ChatMessageType.FILE) {
+                String fileUrl = valueAsString(payload.getOrDefault("fileUrl", content));
+                String fileName = valueAsString(payload.get("fileName"));
+                Long fileSize = valueAsLong(payload.get("fileSize"));
+                msg = chatService.sendGroupFileMessage(senderId, groupId, fileUrl, fileName, fileSize, type);
+            } else {
+                msg = chatService.sendGroupMessage(senderId, groupId, content, type);
+            }
+
+            Map<String, Object> response = buildMessageResponse(msg);
+            messagingTemplate.convertAndSend("/topic/group/" + groupId, response);
+        } catch (Exception e) {
+            sendError(senderId, e.getMessage());
         }
-
-        Map<String, Object> response = buildMessageResponse(msg);
-
-        // 发送给群话题
-        messagingTemplate.convertAndSend("/topic/group/" + groupId, response);
     }
 
     @MessageMapping("/chat.recall")
@@ -86,22 +85,26 @@ public class ChatWebSocketController {
         Long senderId = extractUserId(principal);
         if (senderId == null) return;
 
-        Long messageId = Long.valueOf(payload.get("messageId").toString());
-        boolean success = chatService.recallMessage(messageId, senderId);
+        try {
+            Long messageId = Long.valueOf(payload.get("messageId").toString());
+            boolean success = chatService.recallMessage(messageId, senderId);
 
-        if (success) {
-            Map<String, Object> notification = new HashMap<>();
-            notification.put("type", "RECALL");
-            notification.put("messageId", messageId);
+            if (success) {
+                Map<String, Object> notification = new HashMap<>();
+                notification.put("type", "RECALL");
+                notification.put("messageId", messageId);
 
-            if (payload.containsKey("groupId")) {
-                Long groupId = Long.valueOf(payload.get("groupId").toString());
-                messagingTemplate.convertAndSend("/topic/group/" + groupId, notification);
-            } else if (payload.containsKey("receiverId")) {
-                Long receiverId = Long.valueOf(payload.get("receiverId").toString());
-                messagingTemplate.convertAndSendToUser(receiverId.toString(), "/queue/private", notification);
-                messagingTemplate.convertAndSendToUser(senderId.toString(), "/queue/private", notification);
+                if (payload.containsKey("groupId")) {
+                    Long groupId = Long.valueOf(payload.get("groupId").toString());
+                    messagingTemplate.convertAndSend("/topic/group/" + groupId, notification);
+                } else if (payload.containsKey("receiverId")) {
+                    Long receiverId = Long.valueOf(payload.get("receiverId").toString());
+                    messagingTemplate.convertAndSendToUser(receiverId.toString(), "/queue/private", notification);
+                    messagingTemplate.convertAndSendToUser(senderId.toString(), "/queue/private", notification);
+                }
             }
+        } catch (Exception e) {
+            sendError(senderId, e.getMessage());
         }
     }
 
@@ -110,17 +113,21 @@ public class ChatWebSocketController {
         Long senderId = extractUserId(principal);
         if (senderId == null) return;
 
-        Map<String, Object> typing = new HashMap<>();
-        typing.put("type", "TYPING");
-        typing.put("senderId", senderId);
+        try {
+            Map<String, Object> typing = new HashMap<>();
+            typing.put("type", "TYPING");
+            typing.put("senderId", senderId);
 
-        if (payload.containsKey("groupId")) {
-            Long groupId = Long.valueOf(payload.get("groupId").toString());
-            messagingTemplate.convertAndSend("/topic/group/" + groupId, typing);
-        } else if (payload.containsKey("receiverId")) {
-            Long receiverId = Long.valueOf(payload.get("receiverId").toString());
-            typing.put("receiverId", receiverId);
-            messagingTemplate.convertAndSendToUser(receiverId.toString(), "/queue/private", typing);
+            if (payload.containsKey("groupId")) {
+                Long groupId = Long.valueOf(payload.get("groupId").toString());
+                messagingTemplate.convertAndSend("/topic/group/" + groupId, typing);
+            } else if (payload.containsKey("receiverId")) {
+                Long receiverId = Long.valueOf(payload.get("receiverId").toString());
+                typing.put("receiverId", receiverId);
+                messagingTemplate.convertAndSendToUser(receiverId.toString(), "/queue/private", typing);
+            }
+        } catch (Exception e) {
+            sendError(senderId, e.getMessage());
         }
     }
 
@@ -163,5 +170,12 @@ public class ChatWebSocketController {
         } catch (NumberFormatException e) {
             return null;
         }
+    }
+
+    private void sendError(Long userId, String message) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("type", "CHAT_ERROR");
+        payload.put("message", message != null ? message : "消息发送失败");
+        messagingTemplate.convertAndSendToUser(userId.toString(), "/queue/private", payload);
     }
 }

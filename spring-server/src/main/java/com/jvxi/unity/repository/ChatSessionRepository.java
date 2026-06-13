@@ -20,6 +20,12 @@ public interface ChatSessionRepository extends JpaRepository<ChatSession, Long> 
     Optional<ChatSession> findByUserIdAndTargetGroupId(Long userId, Long targetGroupId);
 
     @Modifying
+    void deleteByTargetGroupId(Long targetGroupId);
+
+    @Modifying
+    void deleteByUserIdAndTargetGroupId(Long userId, Long targetGroupId);
+
+    @Modifying
     @Query("UPDATE ChatSession s SET s.unreadCount = 0 WHERE s.userId = :userId AND s.targetUserId = :targetUserId")
     void clearPrivateUnread(@Param("userId") Long userId, @Param("targetUserId") Long targetUserId);
 

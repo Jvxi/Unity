@@ -478,7 +478,7 @@ export interface ChatMessage {
   receiverId?: number;
   groupId?: number;
   content: string;
-  messageType: 'TEXT' | 'IMAGE' | 'FILE' | 'SYSTEM';
+  messageType: 'TEXT' | 'IMAGE' | 'FILE' | 'EMOJI' | 'SYSTEM';
   fileUrl?: string;
   fileName?: string;
   fileSize?: number;

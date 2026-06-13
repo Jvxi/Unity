@@ -57,11 +57,13 @@ public class ChatController {
 
     @GetMapping("/history/group")
     public ResponseEntity<Map<String, Object>> getGroupHistory(
+            Authentication auth,
             @RequestParam Long groupId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
         try {
-            List<Map<String, Object>> messages = chatService.getGroupHistory(groupId, page, size);
+            Long userId = getUserId(auth);
+            List<Map<String, Object>> messages = chatService.getGroupHistory(userId, groupId, page, size);
             return ResponseEntity.ok(Map.of("success", true, "data", messages));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
